@@ -45,24 +45,29 @@ git -C C:\tools\skills pull
 
 ### Codex 安裝/更新/移除 指令說明
 
+> [!IMPORTANT]
+> Codex 的本機 marketplace 路徑**必須使用正斜線**。
+> 傳入 `C:\tools\skills` 會被判定為 `invalid marketplace source format`，要寫成 `C:/tools/skills`。
+
 安裝指令 (開啟 Command 終端後直接輸入)：
 ```powershell
-codex plugin marketplace add C:\tools\skills
+codex plugin marketplace add C:/tools/skills
 ```
 ```powershell
 codex plugin add tony-skills@tony-skills
 ```
 
-更新指令：
+更新指令 (先更新本機 repository，再重新 add 一次 plugin)：
 ```powershell
 git -C C:\tools\skills pull
 ```
 ```powershell
-codex plugin marketplace upgrade tony-skills
-```
-```powershell
 codex plugin add tony-skills@tony-skills
 ```
+
+> `codex plugin marketplace upgrade` **只適用 Git marketplace**，對本機路徑的 marketplace 會回
+> `marketplace is not configured as a Git marketplace`，更新時不需要也不能執行。
+> 本機 marketplace 的 root 直接指向 `C:\tools\skills`，`git pull` 後再 `plugin add` 就會裝上新版本。
 
 移除指令：
 ```powershell
@@ -70,6 +75,11 @@ codex plugin remove tony-skills@tony-skills
 ```
 ```powershell
 codex plugin marketplace remove tony-skills
+```
+
+確認目前安裝狀態：
+```powershell
+codex plugin list
 ```
 
 > repository 名稱為 `skills`，marketplace 名稱為 `tony-skills`（取自 `.claude-plugin/marketplace.json` 的 `name`）。
