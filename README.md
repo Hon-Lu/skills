@@ -1,6 +1,6 @@
 # tony-skills
 
-套件版本：`v0.2.0`
+套件版本：`v0.3.0`
 安裝教程：[INSTALL.md](./INSTALL.md)
 <!-- 版本對齊 plugins/tony-skills/.claude-plugin/plugin.json 與 .codex-plugin/plugin.json，發版時三處一併更新 -->
 
@@ -17,7 +17,7 @@ Tony 的 Skills。
 
 | Skill | 用途 |
 | --- | --- |
-| `mr-review` | 合併前的 code review。由使用者給目標分支與本次變更目的，不自行推測背景或搜尋文件；findings 寫到 `.ai/code-review/`。所有候選一律通過證據門檻後才輸出 P0–P3。 |
+| `mr-review` | 合併前的 code review。開場主動問走「標準」還是「Matt Workflow」：前者由你給目標分支與變更目的；後者只給目標分支，規格與 ticket 從 `.ai/.scratch/<分支名>/` 取得。所有候選一律通過證據門檻後才輸出 P0–P3 findings。 |
 
 ### mr-review
 
@@ -38,3 +38,4 @@ Tony 的 Skills。
 | 相依 | 用途 | 缺少時 |
 | --- | --- | --- |
 | [Matt Pocock 的 skills](https://github.com/mattpocock/skills) | `mr-review` 完整調用其 `code-review` 取得兩軸候選 | 無法運作 |
+| `.ai/.scratch/<分支名>/` 下的規格與 ticket | `mr-review` 模式 B 的審查背景來源 | 模式 B 不可用，改走模式 A |

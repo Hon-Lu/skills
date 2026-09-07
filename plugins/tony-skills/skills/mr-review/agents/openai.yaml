@@ -1,5 +1,5 @@
 interface:
   display_name: "MR Review"
-  short_description: "合併前的 code review，輸出 P0–P3 findings"
+  short_description: "合併前的 code review，標準或 Matt Workflow 兩種模式"
 policy:
   allow_implicit_invocation: false
