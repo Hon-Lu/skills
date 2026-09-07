@@ -1,5 +1,5 @@
 interface:
   display_name: "MR Review"
-  short_description: "合併前的 code review，自動取用 feature 目錄的規格"
+  short_description: "合併前的 code review，輸出 P0–P3 findings"
 policy:
   allow_implicit_invocation: false

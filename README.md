@@ -1,6 +1,6 @@
 # tony-skills
 
-套件版本：`v0.1.0`
+套件版本：`v0.2.0`
 安裝教程：[INSTALL.md](./INSTALL.md)
 <!-- 版本對齊 plugins/tony-skills/.claude-plugin/plugin.json 與 .codex-plugin/plugin.json，發版時三處一併更新 -->
 
@@ -11,13 +11,13 @@
 > [!NOTE]
 > 目前 Plugin 僅支持 **Claude Code** 與 **Codex** 安裝
 
-個人 skill 集，收錄公司實務需要、但既有工作流未涵蓋的環節。
+Tony 的 Skills。
 
 ## 目前收錄的 skill
 
 | Skill | 用途 |
 | --- | --- |
-| `mr-review` | 合併前的 code review。自家 branch 只需給目標分支，規格由 feature 目錄自動取得、`REVIEW.md` 寫回該目錄；代審他人 MR 則另外要背景說明，寫到 `.ai/code-review/`。所有候選一律通過證據門檻後才輸出 P0–P3 findings。 |
+| `mr-review` | 合併前的 code review。由使用者給目標分支與本次變更目的，不自行推測背景或搜尋文件；findings 寫到 `.ai/code-review/`。所有候選一律通過證據門檻後才輸出 P0–P3。 |
 
 ### mr-review
 
@@ -38,4 +38,3 @@
 | 相依 | 用途 | 缺少時 |
 | --- | --- | --- |
 | [Matt Pocock 的 skills](https://github.com/mattpocock/skills) | `mr-review` 完整調用其 `code-review` 取得兩軸候選 | 無法運作 |
-| [support-matt](https://github.com/asd880921/support-matt) | 模式 A 的 feature 目錄慣例由 `setup-matt-preset` 建立；`mr-review` 的下一步引導會指向其 `implement-*` 與 `to-engineering-spec` 等 skill | 模式 A 退化為模式 B；下一步引導失效，審查本身仍可運作 |

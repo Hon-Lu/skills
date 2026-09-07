@@ -1,61 +1,28 @@
 ---
 name: mr-review
-description: 審查 MR、PR、目前分支或 commit 範圍。先判定是「自家 branch」還是「代審他人 MR」：前者只需目標分支，規格與 ticket 由分支對應的 feature 目錄自動取得；後者需目標分支與變更背景。完整調用 Matt 的 code-review 取得 Standards 與 Spec 兩軸候選，再套上本 skill 的審查範圍、資安與資料一致性規則、證據門檻與 P0–P3 嚴重程度，只把可獨立貼至 MR 的 findings 寫進 REVIEW.md。
+description: 審查 MR、PR、目前分支或 commit 範圍。由使用者提供目標分支與本次變更目的，不自行推測審查背景或搜尋文件。完整調用 Matt 的 code-review 取得 Standards 與 Spec 兩軸候選，再套上本 skill 的審查範圍、資安與資料一致性規則、證據門檻與 P0–P3 嚴重程度，只把可獨立貼至 MR 的 findings 寫進 REVIEW.md。
 ---
 
 # mr-review
 
 Matt 的 `code-review` 的**上層入口**。它自己不取代任何審查能力：Matt 的兩軸（Standards / Spec）照跑，本 skill 負責三件 Matt 不管的事——**決定審什麼範圍**、**決定 finding 夠不夠格被寫出來**、**決定寫到哪裡**。
 
-## 兩種模式
-
-開場第一件事是判定模式，**不得跳過，也不得兩種混用**。
-
-| | **A. 自家 branch** | **B. 代審他人 MR** |
-| --- | --- | --- |
-| 判定依據 | 當前分支有對應的 feature 目錄 | 沒有 |
-| 使用者要提供 | **只有目標分支** | 目標分支 + 變更背景 |
-| 審查背景來源 | feature 目錄下的規格與 ticket | 使用者提供的 Issue、文件或口頭說明 |
-| 輸出位置 | feature 目錄下的 `REVIEW.md` | `.ai/code-review/<target>__<current>/REVIEW.md` |
-
-### 模式判定
-
-1. 讀 `.ai/docs/agents/issue-tracker.md` 取得 feature 目錄的位置慣例（通常是 `.ai/.scratch/<feature>/`）。找不到時改讀 `docs/agents/issue-tracker.md`；兩者皆無，直接視為模式 B。
-2. 依當前 git 分支名稱推斷對應的 feature 目錄，確認它實際存在。
-3. 目錄存在 → 模式 A。不存在 → 模式 B。
-
-**推斷不出唯一對應（例如分支名對到多個目錄，或名稱差異大到只能用猜的）時，停下來問使用者是哪一個，不要猜，也不要因為猜不到就自己降級成模式 B。** 降級的代價是使用者被要求重打一份現成文件裡就有的背景。
-
 ## 必要輸入
-
-### 模式 A
-
-只有一項：**目標分支、base ref 或 commit 範圍**。
-
-沒有時停下來問，**不得自行套用預設目標分支**——`main` 不一定是這條 branch 的分歧點。
-
-審查背景由 feature 目錄自行取得，依序：
-
-1. `engineering-spec.md` —— 有的話以它為主，它是這條 branch 唯一會就地修訂的文件。
-2. `spec.md` —— 需求、範圍與行為基準。
-3. `issues/` 底下的 ticket —— 本次變更實際交付了哪幾張票、各自的驗收條件。
-
-三者都不存在（目錄在但是空的）時，**不要退回去要使用者補文件**，改為停下來確認：是否該走模式 B。
-
-### 模式 B
 
 兩項都要，缺任一項立即停止：
 
-1. 目標分支、base ref 或 commit 範圍。
-2. 本次審查訊息、Issue、需求背景、開發文件或驗收條件；**沒有額外文件時，也必須由使用者明確說明本次變更目的**。
+1. **目標分支、base ref 或 commit 範圍。** 不得自行套用預設目標分支——`main` 不一定是這條 branch 的分歧點。
+2. **本次變更的目的。** Issue、需求、開發文件或驗收條件皆可；**沒有額外文件時，也必須由使用者明確說明本次變更目的**。
 
 停止時清楚列出缺少的項目請使用者補充，**不要先讀 diff、不要先審程式碼、不要建立 `REVIEW.md`**。沒有變更目的就開審，等於拿實作反推需求，會把「照需求做的」報成 finding。
+
+使用者指定的文件一律讀取，**但不主動推測、搜尋或猜測還需要哪些文件**。使用者沒給的就是沒有，缺的部分回到上面第 2 項要求補齊，不要自行去翻 repository 找可能相關的規格或 ticket。
 
 ## 與 Matt `code-review` 的關係
 
 本 skill **完整調用** `mattpocock-skills:code-review`，把上面判定出來的固定點與規格來源交給它，兩軸照原樣跑完。
 
-**不對它套用任何瘦身參數。** 本 skill 是合併前的最後一關，`implement-oneshot` 那套「Spec 軸改讀 ticket、縮小固定點」的省法在那裡成立（實作剛做完、驗收條件剛逐條核對過），在這裡不成立——這裡要看的正是整條 branch 累積下來、逐票核對看不到的東西。省 token 的位置不在這一關。
+**不對它套用任何瘦身參數。** 本 skill 是合併前的最後一關，「Spec 軸改讀 ticket、縮小固定點」那類省法在剛做完實作、驗收條件剛逐條核對過時才成立，在這裡不成立——這裡要看的正是整條 branch 累積下來、逐票核對看不到的東西。省 token 的位置不在這一關。
 
 ### Matt 的兩軸報告是輸入，不是輸出
 
@@ -143,14 +110,11 @@ P3 可保留有價值的小細節，但仍必須符合完整證據門檻。不�
 
 ## 輸出
 
-有 findings 時，依模式決定寫入位置：
+有 findings 時，寫入 `.ai/code-review/<target-branch>__<current-branch>/REVIEW.md`。
 
-| 模式 | 路徑 |
-| --- | --- |
-| A. 自家 branch | 判定出來的 feature 目錄下的 `REVIEW.md`（與 `issues/` 同層） |
-| B. 代審他人 MR | `.ai/code-review/<target-branch>__<current-branch>/REVIEW.md` |
+目錄名先正規化：移除目標分支的 `origin/`，並將目標及目前分支名稱中的 `/` 改為 `-`。
 
-模式 B 的目錄名先正規化：移除目標分支的 `origin/`，並將目標及目前分支名稱中的 `/` 改為 `-`。
+使用者明確指定其他輸出位置時依其指定，不自行改寫到別處。
 
 既有檔案直接覆寫——本 skill 可對同一條 branch 重複執行，每次都反映當下狀態，不保留上一輪的內容當歷程。
 
@@ -172,17 +136,17 @@ findings 依 `P0` 至 `P3` 排序，使用以下格式：
 
 沒有 findings 時不要建立檔案，回覆：`未發現 Code Review Finding。`
 
-最終回覆同時列出：本次採用的模式與判定依據、findings 數量與最高等級、實際測試結果或未執行測試，以及有建立時的 `REVIEW.md` 路徑。
+最終回覆同時列出：本次審查的目標分支與範圍、findings 數量與最高等級、實際測試結果或未執行測試，以及有建立時的 `REVIEW.md` 路徑。
 
 ## 執行限制
 
 - **不修改任何程式碼、測試或設計文件**，只建立或覆寫 `REVIEW.md`。發現問題一律回報，修不修由使用者決定。
 - **不遞迴調用本 skill**，也不改由其他 code review skill 代替 Matt 的 `code-review`。
-- 模式 A 讀 feature 目錄是為了取得審查背景，**不是去盤點測試覆蓋**——那是 `to-acceptance-map` 的工作，兩者不重疊。
+- 讀使用者提供的文件是為了取得審查背景，**不是去盤點測試覆蓋**——覆蓋盤點是另一件事，本 skill 不做。
 
 ## 下一步引導（純提示，不主動調用）
 
-- **有 P0 / P1** → 提示先處理再合併；修正屬於實作，回 `implement-stepwise` 或 `implement-oneshot` 處理，本 skill 不動程式。
+- **有 P0 / P1** → 提示先處理再合併；修正屬於實作，本 skill 不動程式。
 - **只有 P2 / P3** → 提示由使用者決定本次處理或另開 ticket。
 - **修正後** → 提示重跑本 skill，`REVIEW.md` 會覆寫成當下狀態。
-- **全部通過** → 模式 A 的後續為 `to-engineering-spec` 定稿 → `to-acceptance-map` → `engineering-spec-deliverable`；模式 B 到此結束，不接任何 pipeline。
+- **全部通過** → 本 skill 到此結束，不主動接續任何後續流程。

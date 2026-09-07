@@ -99,4 +99,3 @@ ssh -T git@github.com
 ### 前置需求
 
 `mr-review` 掛在 [Matt Pocock 的 skills](https://github.com/mattpocock/skills) 上運作，安裝前請先具備該套 skill。
-搭配 [support-matt](https://github.com/asd880921/support-matt) 使用時功能完整；未安裝時 `mr-review` 仍可運作，但只走模式 B。
