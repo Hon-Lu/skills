@@ -1,0 +1,14 @@
+{
+  "name": "tony-skills",
+  "version": "0.1.0",
+  "description": "Tony 的個人 skill 集：公司實務需要、但既有工作流未涵蓋的環節。",
+  "author": {
+    "name": "Tony.Lu"
+  },
+  "keywords": [
+    "code-review",
+    "merge-request",
+    "workflow",
+    "gitlab"
+  ]
+}

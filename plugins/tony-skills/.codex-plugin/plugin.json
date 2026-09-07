@@ -1,0 +1,25 @@
+{
+  "name": "tony-skills",
+  "version": "0.1.0",
+  "description": "Tony 的個人 skill 集：公司實務需要、但既有工作流未涵蓋的環節。",
+  "author": {
+    "name": "Tony.Lu"
+  },
+  "keywords": [
+    "code-review",
+    "merge-request",
+    "workflow",
+    "gitlab"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Tony Skills",
+    "shortDescription": "個人 skill 集",
+    "longDescription": "公司實務需要、但既有工作流未涵蓋的環節。目前收錄 mr-review（合併前的 code review，含資安、資料一致性與 API 相容性規則）。",
+    "developerName": "Tony.Lu",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Write"
+    ]
+  }
+}
