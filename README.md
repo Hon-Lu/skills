@@ -1,6 +1,6 @@
 # tony-skills
 
-套件版本：`v0.3.0`
+套件版本：`v0.4.0`
 安裝教程：[INSTALL.md](./INSTALL.md)
 <!-- 版本對齊 plugins/tony-skills/.claude-plugin/plugin.json 與 .codex-plugin/plugin.json，發版時三處一併更新 -->
 
