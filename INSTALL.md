@@ -108,4 +108,4 @@ ssh -T git@github.com
 
 ### 前置需求
 
-`mr-review` 掛在 [Matt Pocock 的 skills](https://github.com/mattpocock/skills) 上運作，安裝前請先具備該套 skill。
+`mr-review` 獨立運作，不需另外安裝其他 skill。模式 B（Matt Workflow）需要專案的 `.ai/.scratch/<分支名>/` 下已有規格與 ticket。
