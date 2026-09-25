@@ -6,7 +6,7 @@
 ### 取得 repository
 
 ```powershell
-git clone https://github.com/asd880921/skills.git C:\tools\skills
+git clone https://github.com/Hon-Lu/skills.git C:\tools\skills
 ```
 
 路徑可自訂，以下指令一律以 `C:\tools\skills` 為例；換路徑時同步替換。
@@ -90,7 +90,7 @@ codex plugin list
 repository 轉為 public 後，可直接用簡寫安裝，不必先 clone：
 
 ```
-/plugin marketplace add asd880921/skills
+/plugin marketplace add Hon-Lu/skills
 ```
 
 維持 private 但想省略 clone 步驟時，需將本機公鑰加入 GitHub 帳號
