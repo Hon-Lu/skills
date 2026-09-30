@@ -1,6 +1,6 @@
 ---
 name: herdr-dual-review
-description: 用 Herdr 在旁邊的 pane 同時開 Claude 與 Codex 的原生 code review（Claude `/code-review high`、Codex `codex review`），只有一方抓到的問題交給另一方質詢一輪，最後彙整成一份 REVIEW.md 並回報路徑。只在使用者明確呼叫這個 skill 時執行，參數帶目標分支，例如「目標分支：dev」。主 agent 可以是 Claude 或 Codex。
+description: 用 Herdr 並行執行 Claude 與 Codex 原生 code review，交叉質詢單方發現後彙整為 REVIEW.md。僅在明確呼叫時使用，需指定目標分支。
 disable-model-invocation: true
 ---
 
