@@ -1,33 +1,24 @@
 ## 安裝教程
 
-本 repository 為 private，plugin 指令無法直接從 GitHub 取得，
-因此採**先 clone 到本機、再以本機路徑安裝**的方式。
+本 repository 為 public，Claude Code 與 Codex 都可以直接從 GitHub 安裝，不需要先 clone。
 
-### 取得 repository
-
-```powershell
-git clone https://github.com/Hon-Lu/skills.git C:\tools\skills
-```
-
-路徑可自訂，以下指令一律以 `C:\tools\skills` 為例；換路徑時同步替換。
+> repository 為 `Hon-Lu/skills`，marketplace 與 plugin 名稱都是 `tony-skills`（取自 `.claude-plugin/marketplace.json` 的 `name`）。
+> `marketplace add` 給的是 GitHub repository，其後的 install / update / remove 一律用 `tony-skills`。
 
 ### Claude Code 安裝/更新/移除 指令說明
 
-安裝指令 (於終端開啟 Claude Cli 後，依序輸入以下指令)：
+安裝指令（於終端開啟 Claude CLI 後，依序輸入以下指令）：
 ```
-/plugin marketplace add C:\tools\skills
+/plugin marketplace add Hon-Lu/skills
 ```
 ```
-/plugin install tony-skills
+/plugin install tony-skills@tony-skills
 ```
 ```
 /reload-plugins
 ```
 
-更新指令 (先在終端更新本機 repository，再回 Claude Cli)：
-```powershell
-git -C C:\tools\skills pull
-```
+更新指令：
 ```
 /plugin marketplace update tony-skills
 ```
@@ -45,29 +36,21 @@ git -C C:\tools\skills pull
 
 ### Codex 安裝/更新/移除 指令說明
 
-> [!IMPORTANT]
-> Codex 的本機 marketplace 路徑**必須使用正斜線**。
-> 傳入 `C:\tools\skills` 會被判定為 `invalid marketplace source format`，要寫成 `C:/tools/skills`。
-
-安裝指令 (開啟 Command 終端後直接輸入)：
+安裝指令（開啟終端後直接輸入）：
 ```powershell
-codex plugin marketplace add C:/tools/skills
+codex plugin marketplace add Hon-Lu/skills
 ```
 ```powershell
 codex plugin add tony-skills@tony-skills
 ```
 
-更新指令 (先更新本機 repository，再重新 add 一次 plugin)：
+更新指令（先更新 marketplace 快照，再重新 add 一次 plugin）：
 ```powershell
-git -C C:\tools\skills pull
+codex plugin marketplace upgrade tony-skills
 ```
 ```powershell
 codex plugin add tony-skills@tony-skills
 ```
-
-> `codex plugin marketplace upgrade` **只適用 Git marketplace**，對本機路徑的 marketplace 會回
-> `marketplace is not configured as a Git marketplace`，更新時不需要也不能執行。
-> 本機 marketplace 的 root 直接指向 `C:\tools\skills`，`git pull` 後再 `plugin add` 就會裝上新版本。
 
 移除指令：
 ```powershell
@@ -82,29 +65,10 @@ codex plugin marketplace remove tony-skills
 codex plugin list
 ```
 
-> repository 名稱為 `skills`，marketplace 名稱為 `tony-skills`（取自 `.claude-plugin/marketplace.json` 的 `name`）。
-> 因此 `marketplace add` 給的是本機路徑，其後的 install / update / remove 一律用 `tony-skills`。
+### 從本機路徑安裝改為 GitHub 安裝
 
-### 若日後改為公開，或設定好 SSH
-
-repository 轉為 public 後，可直接用簡寫安裝，不必先 clone：
-
-```
-/plugin marketplace add Hon-Lu/skills
-```
-
-維持 private 但想省略 clone 步驟時，需將本機公鑰加入 GitHub 帳號
-（`Settings` → `SSH and GPG keys`），Claude Code 對 private repository 會改走 SSH：
-
-```powershell
-type $env:USERPROFILE\.ssh\id_ed25519.pub
-```
-
-首次連線前需先信任 GitHub 的 host key，並核對指紋與官方公布值相符：
-
-```powershell
-ssh -T git@github.com
-```
+之前以 `C:\tools\skills` 本機路徑安裝過的，先照上方的移除指令移除 plugin 與 marketplace，再用 GitHub 的方式重新安裝。
+兩種來源的 marketplace 名稱都是 `tony-skills`，不先移除會衝突。
 
 ### 前置需求
 
