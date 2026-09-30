@@ -108,4 +108,4 @@ ssh -T git@github.com
 
 ### 前置需求
 
-`mr-review` 獨立運作，不需另外安裝其他 skill。模式 B（Matt Workflow）需要專案的 `.ai/.scratch/<分支名>/` 下已有規格與 ticket。
+`herdr-dual-review` 需要 Herdr、Claude Code CLI、Codex CLI 與 Python 3，主 agent 必須在 Herdr 的 pane 裡執行。

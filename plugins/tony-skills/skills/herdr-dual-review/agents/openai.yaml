@@ -1,0 +1,5 @@
+interface:
+  display_name: "Herdr Dual Review"
+  short_description: "Claude + Codex native review via Herdr"
+policy:
+  allow_implicit_invocation: false

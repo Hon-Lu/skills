@@ -1,6 +1,0 @@
-interface:
-  display_name: "MR Review"
-  short_description: "三軸審查 MR，追查呼叫鏈與例外邊界，保留待開發者判斷的風險"
-  default_prompt: "請使用 $mr-review 審查目前分支，列出已確認問題、待判斷風險與追查證據。"
-policy:
-  allow_implicit_invocation: false

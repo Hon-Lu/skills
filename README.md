@@ -17,25 +17,26 @@ Tony 的 Skills。
 
 | Skill | 用途 |
 | --- | --- |
-| `mr-review` | 合併前的 code review。開場主動問走「標準」還是「Matt Workflow」：前者由你給目標分支與變更目的；後者只給目標分支，規格與 ticket 從 `.ai/.scratch/<分支名>/` 取得。三軸子代理找候選，主流程逐條以證據門檻驗證後才輸出 P0–P3 findings。 |
+| `herdr-dual-review` | 用 Herdr 在旁邊的 pane 同時跑 Claude 與 Codex 的原生 code review，只有一方抓到的問題交給另一方質詢一輪，最後彙整成一份依 P1–P3 排序的 `REVIEW.md`。 |
 
-### mr-review
+### herdr-dual-review
 
-獨立運作，不依賴其他 code review skill。流程分成「找」與「驗」兩段：
+只能明確呼叫，不會因為一般訊息自動觸發。呼叫時帶上目標分支，例如「目標分支：dev」；要指定兩邊的模型或 effort 也寫在同一句，沒寫就用各 CLI 的預設。主 agent 可以是 Claude 或 Codex。
 
-| 段 | 由誰做 | 內容 |
-| --- | --- | --- |
-| 找 | Standards 軸子代理 | `references/standards-axis.md`：repo 規範、正確性與回歸、實質效能、API 向後相容性、程式碼品質 |
-| 找 | Risk 軸子代理 | `references/risk-axis.md`：資安與權限、後端信任邊界、資料一致性與交易、併發 |
-| 找 | Spec 軸子代理 | `references/spec-axis.md`：需求缺漏、實作與需求不符、需求層級的權限與限制、範圍外變更、測試缺口 |
-| 驗 | 主流程 | 回到程式碼逐條重新查證三軸候選，合併同根因、走完五關證據門檻與明確排除，判定確認程度與 P0–P3 |
+| 步驟 | 內容 |
+| --- | --- |
+| 審查 | Claude 跑 `/code-review high <base>...HEAD`，Codex 跑 `codex review --base <base>`，兩邊同時進行，都只讀不寫 |
+| 等待 | 主 agent 用 `scripts/wait_for.py` 阻塞等待兩邊的結果檔，期間不讀 pane 畫面 |
+| 質詢 | 只有一方抓到的 P1、P2 批次送給另一方查證一輪，回覆只有成立／不成立／不確定加一行證據；Codex 會接回原本的 review session |
+| 報告 | 等級照審查者原本的標示換算成 P1–P3，主 agent 不重新評級、不刪條目；質詢結果標在該條底下 |
 
-三軸以平行子代理執行、互不共用 context，避免「寫法合規但做錯需求」「照需求做但引入越權或超扣」「邏輯正確但同時操作下資料錯亂」互相遮蔽。**子代理負責找出候選，主流程負責刷掉候選**：任何來源的候選都要走完五關，不因來源而免驗。
-
-Standards 與 Risk 軸的最後一節是技術別補充（目前為 .NET / C#），只在專案使用該技術時適用；要支援其他技術，在該節並列子節即可，前面各節不用動。
+報告與各審查者的原始結果都寫在系統 temp 的 `dual-review/<repo>-<分支>-<時間>/`，完成後主 agent 會回報 `REVIEW.md` 的路徑。
 
 ## 前置需求
 
 | 相依 | 用途 | 缺少時 |
 | --- | --- | --- |
-| `.ai/.scratch/<分支名>/` 下的規格與 ticket | `mr-review` 模式 B 的審查背景來源 | 模式 B 不可用，改走模式 A |
+| Herdr | 開審查者的 pane，主 agent 必須在 Herdr 的 pane 裡執行 | skill 直接停止 |
+| Claude Code CLI（`claude`） | Claude 審查者 | 無法執行 |
+| Codex CLI（`codex`） | Codex 審查者與質詢 | 無法執行 |
+| Python 3 | `scripts/` 下的初始化、等待與 Codex 包裝腳本 | 無法執行 |
