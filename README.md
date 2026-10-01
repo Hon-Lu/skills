@@ -24,8 +24,9 @@ Tony 的 Skills。
 明確呼叫並指定目標分支，例如 `目標分支：dev`；可另外指定兩邊的模型與 effort。主 agent 可以是 Claude 或 Codex。
 
 1. Claude（`/code-review high`）與 Codex（`codex review`）同時審查，只讀不寫。
-2. 只有一方抓到的 P1、P2，交給另一方質詢一輪。
-3. 依審查者原本的等級排序成 P1–P3，寫入系統 temp 的 `dual-review/` 並回報路徑。
+2. 只有一方抓到的 P0–P2，交給另一方質詢一輪。
+3. 依 Codex review 的 P0–P3 等級由上而下排序，每條標註本分支引入或既有問題，以及沿用同樣寫法的其他位置，寫入系統 temp 的 `dual-review/` 並回報路徑。
+4. 關閉 Codex 的 pane，保留 Claude 審查者，方便逐條討論時接著問。
 
 ## 前置需求
 
