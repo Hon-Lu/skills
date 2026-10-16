@@ -1,0 +1,5 @@
+interface:
+  display_name: "Herdr Codex Skill"
+  short_description: "Run a skill or slash command in Codex via Herdr"
+policy:
+  allow_implicit_invocation: true
