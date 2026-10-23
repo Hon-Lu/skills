@@ -1,6 +1,6 @@
 ---
 name: herdr-agent-skill
-description: 經 Herdr 讓 Codex 或 Claude agent 執行指定的 skill 或 slash 指令（含 /compact）。agent 要透過 Herdr 把 skill、slash 指令或 /compact 交給 Codex 或 Claude 時使用。需 HERDR_ENV=1。
+description: 經 Herdr 讓 Codex 或 Claude agent 執行指定的 skill 或 slash 指令。agent 要透過 Herdr 把 skill 或 slash 指令交給 Codex 或 Claude 執行時使用。需 HERDR_ENV=1。
 ---
 
 # Herdr 交 agent 執行 skill 或 slash 指令
@@ -48,7 +48,7 @@ Git Bash 會把開頭是 `/` 的參數當成路徑改寫，`/compact` 送到對�
 
 ## 送出之後
 
-- 讀回應，確認 Codex 或 Claude 有照該 skill 的流程進行（`/compact` 則是出現壓縮中的畫面），再 `herdr agent wait <name>` 等待。看出誤解就立刻 `herdr agent send-keys <name> esc` 中斷並回報使用者。
+- 讀回應，確認 Codex 或 Claude 有照該 skill 的流程進行，再 `herdr agent wait <name>` 等待。看出誤解就立刻 `herdr agent send-keys <name> esc` 中斷並回報使用者。
 - 等待期間不要反覆讀畫面看進度。
 - 完成後用 `herdr agent read <name> --source recent-unwrapped` 讀結果回報使用者，並附上 pane ID；pane 保留不關，方便接著問。
 

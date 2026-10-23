@@ -18,7 +18,7 @@ Tony 的 Skills。
 | Skill | 用途 |
 | --- | --- |
 | `herdr-dual-review` | 用 Herdr 並行執行 Claude 與 Codex 原生 code review，交叉質詢單方發現後彙整為 `REVIEW.md` |
-| `herdr-agent-skill` | 經 Herdr 把指定的 skill 或 slash 指令（含 `/compact`）送進 Codex 或 Claude 執行，避開補全選單與 Git Bash 改寫指令 |
+| `herdr-agent-skill` | 經 Herdr 把指定的 skill 或 slash 指令送進 Codex 或 Claude 執行，避開補全選單與 Git Bash 改寫指令 |
 
 ### herdr-dual-review
 
@@ -31,7 +31,7 @@ Tony 的 Skills。
 
 ### herdr-agent-skill
 
-agent 要透過 Herdr 叫 Codex 或 Claude 執行 skill 或 slash 指令時自動觸發，例如「用 herdr 交給 Codex 跑 `/mattpocock-skills:code-review ...`」或「幫右邊的 Claude agent `/compact`」。要跑什麼、帶什麼參數由呼叫端決定，本 skill 只負責送達。
+agent 要透過 Herdr 叫 Codex 或 Claude 執行 skill 或 slash 指令時自動觸發，例如「用 herdr 交給 Codex 跑 `/mattpocock-skills:code-review ...`」或「叫右邊的 Claude agent 跑 `/simplify`」。要跑什麼、帶什麼參數由呼叫端決定，本 skill 只負責送達。
 
 1. 沿用既有的 agent pane，沒有就開一個；對方忙碌時先等它閒置。
 2. 從 PowerShell 送，或在 Git Bash 加 `MSYS_NO_PATHCONV=1`，避免 `/compact` 被改寫成 `C:/Program Files/Git/compact`。
