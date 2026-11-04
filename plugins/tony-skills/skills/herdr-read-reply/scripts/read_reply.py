@@ -11,6 +11,7 @@ status：
   busy         對方 working 或 blocked，先 herdr agent wait 再重跑
   no_session   Herdr 沒有記錄這個 pane 的 session id
   not_found    找不到紀錄檔，或紀錄裡沒有完成的回合
+  stale        Claude 的紀錄檔標題與 pane 標題不同，Herdr 記錄的 session id 已不是 pane 目前的對話
   unsupported  不是 Claude 或 Codex
   error        herdr 指令或解析失敗，message 有原因
 """
@@ -22,6 +23,8 @@ import subprocess
 import sys
 
 PROMPT_LIMIT = 1500
+# Claude 還沒替對話取標題時的預設終端機標題，無法用來比對
+GENERIC_TITLES = {"", "claude", "Claude Code"}
 
 
 def herdr_json(*args):
@@ -35,7 +38,7 @@ def resolve_pane(target):
     agent = herdr_json("agent", "get", target)["agent"]
     pane = next((p for p in herdr_json("pane", "list")["panes"] if p["pane_id"] == agent["pane_id"]), None)
     session = (pane or {}).get("agent_session") or {}
-    return agent, session.get("value")
+    return agent, session.get("value"), (pane or {}).get("terminal_title_stripped") or ""
 
 
 def read_jsonl(path):
@@ -52,6 +55,14 @@ def claude_transcript(session_id):
     root = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
     hits = glob.glob(os.path.join(root, "projects", "*", session_id + ".jsonl"))
     return hits[0] if hits else None
+
+
+def claude_title(path):
+    title = None
+    for entry in read_jsonl(path):
+        if entry.get("type") == "ai-title":
+            title = entry.get("aiTitle")
+    return title
 
 
 def claude_prompt_text(entry):
@@ -145,11 +156,14 @@ def main():
     parser.add_argument("--turns", type=int, default=1)
     a = parser.parse_args()
 
+    # 標題可能含主控台編碼印不出的字元，印不出的改成替代字元，不讓整支腳本中斷
+    sys.stdout.reconfigure(errors="replace")
+
     def report(status, **fields):
         print(json.dumps({"status": status, **fields}, ensure_ascii=False))
 
     try:
-        agent, session_id = resolve_pane(a.target)
+        agent, session_id, pane_title = resolve_pane(a.target)
     except Exception as e:
         return report("error", message=str(e))
 
@@ -165,6 +179,11 @@ def main():
     path = claude_transcript(session_id) if kind == "claude" else codex_transcript(session_id)
     if not path:
         return report("not_found", **base)
+    if kind == "claude" and pane_title not in GENERIC_TITLES:
+        # /clear 會換 session，回報新 session 的 hook 逾時時 Herdr 會留著舊 id，照讀會拿到上一段對話
+        transcript_title = claude_title(path)
+        if transcript_title and transcript_title != pane_title:
+            return report("stale", pane_title=pane_title, transcript_title=transcript_title, transcript=path, **base)
     try:
         turns, pending = claude_turns(path) if kind == "claude" else codex_turns(path)
     except Exception as e:

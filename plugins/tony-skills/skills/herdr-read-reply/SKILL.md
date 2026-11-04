@@ -31,6 +31,7 @@ python "SKILL_DIR/scripts/read_reply.py" --target <agent 名稱或 pane id> --ou
 - `ok`：讀 `out`。`running` 為 `true` 表示對方還有未完成的回合，讀到的是之前完成的那一回合。
 - `busy`：對方 `working` 或 `blocked`，等它停下來，或改讀畫面看它卡在哪。
 - `no_session`、`not_found`、`unsupported`、`error`：這個 pane 讀不到紀錄，改讀畫面。
+- `stale`：Herdr 記錄的 session 已不是 pane 目前的對話（例如對方 `/clear` 過），紀錄檔標題與 pane 標題不同，改讀畫面。
 
 限制：
 
