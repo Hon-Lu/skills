@@ -1,11 +1,11 @@
 ---
-name: herdr-agent-skill
+name: herdr-run-skill
 description: 經 Herdr 讓 Codex 或 Claude agent 執行指定的 skill 或 slash 指令。agent 要透過 Herdr 把 skill 或 slash 指令交給 Codex 或 Claude 執行時使用。需 HERDR_ENV=1。
 ---
 
 # Herdr 交 agent 執行 skill 或 slash 指令
 
-把呼叫端指定的 skill 或 slash 指令送進 Codex 或 Claude 執行。要跑哪個 skill、帶什麼參數由呼叫端決定，本 skill 只負責正確送達。Herdr 的一般用法（開 pane、讀畫面、等待）看原生 `herdr` skill。
+把呼叫端指定的 skill 或 slash 指令送進 Codex 或 Claude 執行。要跑哪個 skill、帶什麼參數由呼叫端決定，本 skill 只負責正確送達。Herdr 的一般用法（開 pane、讀畫面、等待）看原生 `herdr` skill；讀對方的回覆看 `herdr-read-reply`。
 
 ## 前置
 
@@ -50,7 +50,7 @@ Git Bash 會把開頭是 `/` 的參數當成路徑改寫，`/compact` 送到對�
 
 - 讀回應，確認 Codex 或 Claude 有照該 skill 的流程進行，再 `herdr agent wait <name>` 等待。看出誤解就立刻 `herdr agent send-keys <name> esc` 中斷並回報使用者。
 - 等待期間不要反覆讀畫面看進度。
-- 完成後用 `herdr agent read <name> --source recent-unwrapped` 讀結果回報使用者，並附上 pane ID；pane 保留不關，方便接著問。
+- 完成後讀結果回報使用者，並附上 pane ID；pane 保留不關，方便接著問。回覆長、要原文時看 `herdr-read-reply`。
 
 ## pane 操作界線
 

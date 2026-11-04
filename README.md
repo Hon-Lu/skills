@@ -1,6 +1,6 @@
 # tony-skills
 
-套件版本：`v0.10.0`
+套件版本：`v0.11.0`
 安裝教程：[INSTALL.md](./INSTALL.md)
 <!-- 版本對齊 plugins/tony-skills/.claude-plugin/plugin.json 與 .codex-plugin/plugin.json，發版時三處一併更新 -->
 
@@ -18,7 +18,8 @@ Tony 的 Skills。
 | Skill | 用途 |
 | --- | --- |
 | `herdr-dual-review` | 用 Herdr 並行執行 Claude 與 Codex 原生 code review，交叉質詢單方發現後彙整為 `REVIEW.md` |
-| `herdr-agent-skill` | 經 Herdr 把指定的 skill 或 slash 指令送進 Codex 或 Claude 執行，避開補全選單與 Git Bash 改寫指令 |
+| `herdr-run-skill` | 經 Herdr 把指定的 skill 或 slash 指令送進 Codex 或 Claude 執行，避開補全選單與 Git Bash 改寫指令 |
+| `herdr-read-reply` | 經 Herdr 讀取另一個 pane 的內容：依要看的東西選讀畫面或讀 agent 的對話紀錄原文，並附 PowerShell 5.1 另存終端機輸出的寫法 |
 
 ### herdr-dual-review
 
@@ -29,7 +30,7 @@ Tony 的 Skills。
 3. 依 Codex review 的 P0–P3 等級由上而下排序，每條標註本分支引入或既有問題，以及沿用同樣寫法的其他位置，寫入系統 temp 的 `dual-review/` 並回報路徑。
 4. 關閉 Codex 的 pane，保留 Claude 審查者，方便逐條討論時接著問。
 
-### herdr-agent-skill
+### herdr-run-skill
 
 agent 要透過 Herdr 叫 Codex 或 Claude 執行 skill 或 slash 指令時自動觸發，例如「用 herdr 交給 Codex 跑 `/mattpocock-skills:code-review ...`」或「叫右邊的 Claude agent 跑 `/simplify`」。要跑什麼、帶什麼參數由呼叫端決定，本 skill 只負責送達。
 
@@ -38,6 +39,14 @@ agent 要透過 Herdr 叫 Codex 或 Claude 執行 skill 或 slash 指令時自�
 3. 照原樣執行指定的 skill，不換成內建的同類功能；Codex 用 `$skill`、Claude 用 `/skill`，同名候選對不上就問使用者。
 4. Codex 分步輸入（先送名稱、確認選單選中後插入、補參數、確認整行才送出）；Claude 整行送出、確認輸入框後按 Enter。
 5. 確認 agent 照流程進行後等待完成，回報結果並保留 pane。選單與確認畫面一律交給使用者操作。
+
+### herdr-read-reply
+
+agent 要看另一個 pane 的內容時自動觸發，例如「看一下右邊的 agent 回了什麼」，或要在 pane 跑指令並取得結果。
+
+1. 依要看的東西選來源：狀態列、選單、短回覆讀畫面；長報告、要逐字引用或前幾回合的問答，用 `read_reply.py` 讀 Claude 或 Codex 的對話紀錄原文。
+2. `read_reply.py` 把回覆寫成 UTF-8 檔，只回一行 JSON 狀態；讀不到紀錄時改讀畫面。
+3. 終端機照原生 `herdr` 用法；輸出長或要確定結束代碼時，附 PowerShell 5.1 實測可用的另存寫法與常見坑。
 
 ## 前置需求
 

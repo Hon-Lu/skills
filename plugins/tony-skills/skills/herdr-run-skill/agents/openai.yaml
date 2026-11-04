@@ -1,5 +1,5 @@
 interface:
-  display_name: "Herdr Agent Skill"
+  display_name: "Herdr Run Skill"
   short_description: "Run a skill or slash command in Codex or Claude via Herdr"
 policy:
   allow_implicit_invocation: true
