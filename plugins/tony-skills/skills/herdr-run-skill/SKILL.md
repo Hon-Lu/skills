@@ -10,8 +10,31 @@ description: 經 Herdr 讓 Codex 或 Claude agent 執行指定的 skill 或 slas
 ## 前置
 
 - `HERDR_ENV` 不是 `1` 就告知使用者並停止。
-- 沿用既有的 agent pane；沒有就照原生 `herdr` skill 開一個同層 pane，再 `herdr agent start <name> --kind codex --pane <pane>`（Claude 用 `--kind claude`），啟動後先讀一次畫面。
+- 沿用既有的 agent pane；沒有就照原生 `herdr` skill 開一個同層 pane，再啟動 agent：
+  - Codex：`herdr agent start <name> --kind codex --pane <pane> -- -c check_for_update_on_startup=false`，關掉啟動時的更新檢查。
+  - Claude：`herdr agent start <name> --kind claude --pane <pane>`。
 - 送 Claude 前，對方若是 `working` 就先 `herdr agent wait <name>`。
+
+## 剛啟動的 agent：確認可以接收輸入
+
+**只在本 skill 剛 `agent start` 的 agent 上做。** 沿用既有的 agent 時，它早已初始化完成，略過這一節，直接照下面兩節送出。
+
+agent 畫面出現後還要初始化一陣子，Codex 實測可能超過一分鐘；畫面看起來就緒，送進去的字仍可能被吃掉。送第一個指令前，先只送觸發字元，等候選清單出現：
+
+```powershell
+python "SKILL_DIR/scripts/wait_ready.py" --target <agent 名稱或 pane id> --trigger '<觸發字元>'
+```
+
+- 觸發字元：`$`（Codex 的 skill）或 `/`（Claude，以及 Codex 的 slash 指令）。
+- 每輪送一次觸發字元，最多等 10 秒；沒出現清單就 `ctrl+u` 清掉再送下一輪，累計 120 秒就停止。呼叫時把 shell 工具的 timeout 設到 150 秒以上。
+- 從 Git Bash 呼叫時同樣要加 `MSYS_NO_PATHCONV=1`，否則 `/` 會被改寫成路徑。
+
+stdout 只印一行 JSON，依 `status` 處理：
+
+- `ready`：初始化完成，觸發字元留在輸入框裡。接著照下面兩節送出名稱，不要清掉重打。
+- `blocked`：對方停在提示、選擇或授權畫面，腳本沒有送任何字。讀 `screen` 指向的畫面存檔，照「pane 操作界線」處理。
+- `timeout`：120 秒仍沒出現清單，輸入框已清空。不要再重試，讀 `screen` 指向的畫面存檔，轉告使用者。
+- `error`：herdr 指令失敗，把 `message` 轉告使用者。
 
 ## 從哪個 shell 送
 
@@ -31,7 +54,9 @@ Git Bash 會把開頭是 `/` 的參數當成路徑改寫，`/compact` 送到對�
 
 不能用 `herdr agent prompt` 一次送整行：`$`、`/` 會叫出 Codex 的補全選單，開頭被選單吃掉，Codex 只收到後面的參數，當成一般需求開始動工。
 
-1. `herdr pane send-text <pane> '$<skill 名稱>'`：只送觸發字元與名稱（slash 指令則為 `/<指令>`）。
+1. 送出觸發字元與名稱：
+   - 沿用既有的 agent：`herdr pane send-text <pane> '$<skill 名稱>'`（slash 指令則為 `/<指令>`）。
+   - 剛啟動的 agent：`wait_ready.py` 回 `ready` 後觸發字元已在輸入框，只送 `herdr pane send-text <pane> '<skill 名稱>'`。
 2. `herdr agent read <name> --source visible`：確認選單選中的是目標（畫面出現該 skill 與 `enter insert`）。
 3. `herdr pane send-keys <pane> enter`：插入選項，不會送出。
 4. `herdr pane send-text <pane> ' <參數>'`
@@ -42,7 +67,9 @@ Git Bash 會把開頭是 `/` 的參數當成路徑改寫，`/compact` 送到對�
 
 不能用 `herdr agent prompt`：Claude 會把整段當一般訊息收下，`/` 不會觸發 skill 或指令。Claude 的選單不會吃掉已打完的名稱，用 `pane send-text` 整行一次送。
 
-1. `herdr pane send-text <pane> '/<指令> <參數>'`
+1. 送出整行：
+   - 沿用既有的 agent：`herdr pane send-text <pane> '/<指令> <參數>'`。
+   - 剛啟動的 agent：`wait_ready.py` 回 `ready` 後 `/` 已在輸入框，只送 `herdr pane send-text <pane> '<指令> <參數>'`。
 2. `herdr agent read <name> --source visible`：確認輸入框是 `❯ /<指令> <參數>`。輸入框裡的灰字是 Claude 的建議文字，不是已輸入的內容。
 3. `herdr pane send-keys <pane> enter`：送出。
 
@@ -54,4 +81,4 @@ Git Bash 會把開頭是 `/` 的參數當成路徑改寫，`/compact` 送到對�
 
 ## pane 操作界線
 
-Codex 或 Claude 停在選單、授權或提問畫面時，只把畫面內容轉告使用者，由使用者自己到 pane 回應，不代按。唯一例外：本 skill 開的 Codex 跳出更新提示，一律選 Skip。
+Codex 或 Claude 停在選單、授權或提問畫面時，只把畫面內容轉告使用者，由使用者自己到 pane 回應，不代按。
