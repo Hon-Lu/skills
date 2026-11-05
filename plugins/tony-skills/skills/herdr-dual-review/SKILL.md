@@ -1,16 +1,16 @@
 ---
 name: herdr-dual-review
-description: 用 Herdr 並行執行 Claude 與 Codex 原生 code review，交叉質詢單方發現後彙整為 REVIEW.md。僅在明確呼叫時使用，需指定目標分支。
+description: 用 Herdr 並行執行 Claude 與 Codex 原生 code review，交叉質詢單方發現，查證每條後彙整為附處理建議的 REVIEW.md。僅在明確呼叫時使用，需指定目標分支與審查對象（自己的分支或別人的 MR）。
 disable-model-invocation: true
 ---
 
 # Herdr 雙審
 
-你是主 agent：負責開審查者、等待、轉送質詢、寫報告。你自己不做審查。
+你是主 agent：負責開審查者、等待、轉送質詢、查證條目、寫報告。找問題是審查者的工作，你只查證他們列出的條目。
 
 以下 `SKILL_DIR` 指這份 SKILL.md 所在目錄（通常是 `~/.agents/skills/herdr-dual-review`）。
 
-流程依主 agent 分成兩條路線，第 2、3、5、6 步有差異，其餘相同：
+流程依主 agent 分成兩條路線，第 2、3、5、7 步有差異，其餘相同：
 
 - **Claude 主控**：你是 Claude Code。Claude 審查用你自己的 `/code-review` 在背景執行，只有 Codex 透過 Herdr 開。
 - **Codex 主控**：你是 Codex。Claude 與 Codex 兩個審查者都透過 Herdr 開。
@@ -20,6 +20,8 @@ disable-model-invocation: true
 - 執行 `test "${HERDR_ENV:-}" = 1`（PowerShell：`$env:HERDR_ENV -eq '1'`）。不在 Herdr 裡就告知使用者並停止。
 - 從使用者訊息取出：
   - **目標分支**（必填，例如「目標分支：dev」）。沒給就問。
+  - **審查對象**（必填）：自己的分支，或別人的 MR。沒給就和目標分支一起問，開審查者之前確定。
+  - **需求來源**（選填）：ticket、規格的路徑，或 issue 編號與連結。
   - **Claude 模型／effort**、**Codex 模型／effort**（選填）。使用者沒提到的就不帶參數，沿用各 CLI 的預設。
 - Claude 審查一律用 `/code-review high`，`high` 是 review 深度，和 session 的 effort 無關。
 - Claude 主控時，Claude 審查者沿用你自己的模型，無法另外指定。使用者有指定 Claude 模型或 effort 時，告知會被忽略，然後繼續。
@@ -31,6 +33,8 @@ python "SKILL_DIR/scripts/init_run.py" --base <目標分支>
 ```
 
 輸出一行 JSON。`status` 不是 `ok` 就把原因告訴使用者並停止：`dirty` 要先 commit，`base_not_found` 找不到目標分支，`empty` 沒有差異。記下 `run_dir`、`base`（可能已補成 `origin/<分支>`）與其他欄位，填報告時會用到。
+
+有 `base_note` 時告知使用者，並寫進報告的範圍那一行：`local_behind` 表示本地目標分支落後 origin，已自動改用 `origin/<分支>`；`diverged` 表示本地和 origin 互有 commit，仍用本地分支，審查範圍可能不準。腳本不會 fetch，origin 的新舊以本機上次 fetch 的結果為準。
 
 ## 2. 開審查者
 
@@ -155,14 +159,38 @@ python "SKILL_DIR/scripts/wait_for.py" \
 
 質詢到此結束。不把回覆再轉給原本的提出方，也不開第二輪。
 
-質詢結果原樣標在該條底下，由使用者判斷。回覆「不成立」或「不確定」的條目照樣留在原本的等級，不刪除、不調整等級，你也不需要讀程式碼裁決。質詢回覆附的來源與同類位置，併入該條的對應欄位。
+質詢結果原樣標在該條底下。回覆「不成立」或「不確定」的條目照樣留在原本的等級，不刪除、不調整等級。質詢回覆附的來源與同類位置，併入該條的對應欄位。
 
-## 6. 寫報告與收尾
+## 6. 查證每條並給出建議
+
+使用者逐條討論時，每條都會問同樣五件事。這一步先把答案查好，讓使用者只需要討論真正有疑問的條目。沒有任何條目時跳過這一步。
+
+先讀需求來源：使用者有給就用，issue 用 repo 既有的唯讀方式讀取；沒給就依 repo 的 `CLAUDE.md`、`AGENTS.md` 指出的位置，找對應這個分支的 ticket 或規格。找不到就繼續，並在報告標頭註明。
+
+再依審查對象讀一份建議規則：自己的分支讀 `SKILL_DIR/assets/triage-own.md`，別人的 MR 讀 `SKILL_DIR/assets/triage-mr.md`。
+
+每一條都查，包含 P3 與質詢不成立的條目，只讀該條需要的片段：
+
+| 要回答的事 | 怎麼查 |
+| --- | --- |
+| 白話問題 | 一句話講使用者或資料會遇到什麼，用業務語言，不出現方法名 |
+| 這次造成 | 用 `git diff <merge_base> HEAD -- <file>` 與 `git blame` 確認，以查到的為準；和審查者的來源不同時兩者都寫進查證 |
+| 會發生嗎 | 順著程式碼走到觸發條件，並對照需求來源 |
+| 後果 | 發生後資料、流程或使用者實際受到的影響 |
+| 修法 | 改動大小，以及會不會影響其他流程 |
+
+查證全程唯讀，不修改 repo、不跑整合測試。別人的 MR 要列阻擋或建議的條目，能用既有單元測試或 `run_dir` 內的小程式低成本重現時就重現。
+
+完成條件：每一條都有上面五項、一條查證紀錄與一個建議，查不到的項目寫「未查到」。查證時發現的新問題不加進條目，回覆時另外告知使用者。
+
+## 7. 寫報告與收尾
 
 用 `SKILL_DIR/assets/review-template.md` 產生 `<run_dir>/REVIEW.md`。它和 `run_dir` 裡的其他檔案都是暫存產物，用一般 UTF-8 寫入即可，不必另外轉 BOM 或換行格式。
 
 - 標頭填入 `init_run.py` 的欄位與兩邊的 session id。Claude 主控時，Claude 的 session 填 `code-review` 的 task id，模型填你自己的模型。沒有指定的模型或 effort 寫「預設」。
-- 不分章節，每條用 `- [P1] 標題` 開頭的清單項目呈現，細節縮排在底下。依等級排序（P0 → P3）；同一級內依序排兩方都有、質詢成立、質詢不成立或不確定、未質詢的條目。沒有任何條目時寫「無 findings」。
+- 標頭下方先放一行建議摘要與一張總表，每條一列，編號和下方條目相同。建議欄的文字依審查對象的規則填寫。
+- 不分章節，每條用 `1. [P1] 標題` 開頭的編號清單呈現，細節縮排在底下，最前面是建議與查證。依等級排序（P0 → P3）；同一級內依序排兩方都有、質詢成立、質詢不成立或不確定、未質詢的條目。沒有任何條目時寫「無 findings」，省略摘要與總表。
+- 審查者原本的欄位照舊呈現，你的判斷只寫在建議與查證兩行。
 - **發現者**：只有一方找到就寫那一方；兩方在第一輪都找到才兩個都寫。質詢時才同意的一方不算發現者。Claude 有 verdict 時附在名字後面，例如「Claude（PLAUSIBLE）」。
 - **來源**：照抄審查者的判斷；兩方判斷不同時並列，例如「Claude：既有問題／Codex：本分支引入」。沒有任何一方判斷時寫「未判斷」。
 - **同類位置**：合併兩方列出的位置；都沒有就省略這一行。
@@ -171,9 +199,10 @@ python "SKILL_DIR/scripts/wait_for.py" \
 
 最後用 `herdr pane close <B>` 關掉 Codex 的 pane。Claude 審查者保留，使用者逐條討論時可以接著問：Claude 主控時由你用 SendMessage 傳給 task id；Codex 主控時用 `herdr agent prompt <名稱>`。然後回覆使用者：
 
-- `REVIEW.md` 的完整路徑
-- P0–P3 各幾條，以及 P0、P1 的標題
-- 標了 ⚠ 的條目，這些要由使用者判斷
+- `REVIEW.md` 的完整路徑；別人的 MR 再加上 `MR-COMMENT.md` 的完整路徑
+- 建議摘要與總表，讓使用者可以直接回「修 1、3」，或問要討論哪一條
+- 標了 ⚠ 的條目，這些質詢有分歧
+- 查證時發現的新問題（有才寫）
 - Codex 主控時，Claude 審查者仍開著（名稱與 pane ID），討論完可以用 `herdr pane close <A>` 關掉
 
-不要修改任何程式碼，要修哪些由使用者決定。
+到這裡就停，要修哪些由使用者決定，程式碼等使用者指示才改。使用者做出決定後，把決定與理由寫進該條的 **決策** 一行；建議不修但使用者要修時，照使用者的決定。

@@ -24,6 +24,26 @@ def fail(status, **extra):
     sys.exit(2)
 
 
+def prefer_up_to_date_base(base):
+    """本地目標分支落後 origin 時改用 origin，否則分支已合併的 origin commit 會被算進審查範圍。
+
+    不 fetch：可能跳出憑證視窗，origin 的新舊以本機上次 fetch 的結果為準。
+    """
+    remote = "origin/" + base
+    if base.startswith("origin/") or git("rev-parse", "--verify", "--quiet", remote + "^{commit}")[0] != 0:
+        return base, None
+
+    code, counts, _ = git("rev-list", "--left-right", "--count", base + "..." + remote)
+    if code != 0:
+        return base, None
+    ahead, behind = (int(n) for n in counts.split())
+    if not behind:
+        return base, None
+    if ahead:
+        return base, f"diverged: ahead {ahead}, behind {behind}"
+    return remote, f"local_behind: {behind}"
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--base", required=True)
@@ -44,6 +64,8 @@ def main():
             base = "origin/" + base
         else:
             fail("base_not_found", base=a.base)
+
+    base, base_note = prefer_up_to_date_base(base)
 
     _, merge_base = git("merge-base", base, "HEAD")[:2]
     _, files, _ = git("diff", "--name-only", merge_base, "HEAD")
@@ -71,6 +93,8 @@ def main():
         "files_changed": len(files.splitlines()),
         "run_dir": run_dir,
     }
+    if base_note:
+        info["base_note"] = base_note
     with open(os.path.join(run_dir, "run.json"), "w", encoding="utf-8") as f:
         json.dump(info, f, ensure_ascii=False, indent=2)
     print(json.dumps(info, ensure_ascii=False))
