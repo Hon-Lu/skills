@@ -1,0 +1,15 @@
+{
+  "description": "在 Herdr 管理的 pane 內帶入 Herdr 協作規則",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks-handlers/herdr_session_start.py\""
+          }
+        ]
+      }
+    ]
+  }
+}

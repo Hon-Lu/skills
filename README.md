@@ -1,6 +1,6 @@
 # tony-skills
 
-套件版本：`v0.12.0`
+套件版本：`v0.13.0`
 安裝教程：[INSTALL.md](./INSTALL.md)
 <!-- 版本對齊 plugins/tony-skills/.claude-plugin/plugin.json 與 .codex-plugin/plugin.json，發版時三處一併更新 -->
 
@@ -20,6 +20,10 @@ Tony 的 Skills。
 | `herdr-dual-review` | 用 Herdr 並行執行 Claude 與 Codex 原生 code review，交叉質詢單方發現，查證每條後彙整為附處理建議的 `REVIEW.md` |
 | `herdr-run-skill` | 經 Herdr 把指定的 skill 或 slash 指令送進 Codex 或 Claude 執行，避開補全選單與 Git Bash 改寫指令 |
 | `herdr-read-reply` | 經 Herdr 讀取另一個 pane 的內容：依要看的東西選讀畫面或讀 agent 的對話紀錄原文，並附 PowerShell 5.1 另存終端機輸出的寫法 |
+
+## Herdr 協作規則（Claude Code）
+
+Claude Code 在 Herdr 管理的 pane 啟動時（`HERDR_ENV=1`），plugin 的 SessionStart hook 會把 `plugins/tony-skills/hooks-handlers/herdr-rules.md` 帶入 context：轉述給其他 agent 時表明身分、不代替使用者確認、一次性代工改用 sub-agent。新開 session、resume、`/clear` 與 context 壓縮後都會重新帶入；不在 Herdr 內不輸出。修改規則檔後，已開著的 session 要等下一次觸發才會讀到新版。Codex 不支援，需要 `python` 在 PATH 上。
 
 ### herdr-dual-review
 
