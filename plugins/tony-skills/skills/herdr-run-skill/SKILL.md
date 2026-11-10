@@ -43,15 +43,22 @@ hc run --bg --json --name <名稱> --outlive-parent --cwd "<目錄>" --label her
 
 ## 沿用既有的 agent
 
-從 agent 用 `hc send` 送出的內容，對方收到時會包成 `<hc from="t9">…</hc>`，開頭不再是 `/`，所以 slash 指令不會觸發。
+從 agent 用 `hc send` 送出的內容，對方收到時會包成 `<hc from="t9">…</hc>`。這個來源標記對一般對話有用，但開頭不再是 `/`，slash 指令與 skill 不會觸發；自然語句請對方調用也不行，設了 `disable-model-invocation` 的 skill 會拒絕。
 
-- Codex：`hc send --wait <名稱> '$<skill> <參數>'`。`$` 仍會讓 Codex 讀取該 skill。
-- Claude：寫成明確的請求，`hc send --wait <名稱> '請用 Skill 工具調用 <plugin>:<skill>，參數：<參數>'`。
-- Claude 的內建 slash 指令（例如 `/compact`）不是 skill，要逐鍵輸入：
-  1. `hc keys <名稱> / c o m p a c t`
-  2. `hc read --lines 0 <名稱>`：確認輸入框內容無誤。輸入框裡的灰字是 Claude 的建議文字，不是已輸入的內容。
-  3. `hc keys <名稱> enter`
-- `hc keys` 實測接受英文字母、`/`、`-`，不接受 `$`、`:`。內建指令帶了其他字元，就請使用者自己在該終端機輸入。
+所以**要觸發 skill 或 slash 指令時一律不帶標記，其他對話一律保留標記**，不依情況判定。`hc send` 沒有對應選項，做法是只在這一次呼叫清掉 `HC_TERMINAL_ID`：
+
+```bash
+env -u HC_TERMINAL_ID MSYS_NO_PATHCONV=1 hc send --wait <名稱> '/<plugin>:<skill> <參數>'    # Claude
+env -u HC_TERMINAL_ID hc send --wait <名稱> '$<skill> <參數>'                               # Codex
+```
+
+```powershell
+$sender = $env:HC_TERMINAL_ID; Remove-Item Env:HC_TERMINAL_ID; hc send --wait <名稱> '/<plugin>:<skill> <參數>'; $env:HC_TERMINAL_ID = $sender
+```
+
+- 內建 slash 指令（例如 `/compact`）用同樣的寫法。
+- 這是實測 hc 0.1.19 的行為，文件沒有保證。送出後用 `hc read --lines 0 <名稱>` 確認對方有觸發；出現 `<hc from=` 或對方把它當一般訊息，就停下來轉告使用者，改請使用者親自輸入。
+- 少了標記，對方看不出訊息來自 agent。代使用者轉述時，要在參數裡說明來源。
 
 ## 從哪個 shell 送
 

@@ -1,6 +1,6 @@
 # tony-skills
 
-套件版本：`v0.14.0`
+套件版本：`v0.14.1`
 安裝教程：[INSTALL.md](./INSTALL.md)
 <!-- 版本對齊 plugins/tony-skills/.claude-plugin/plugin.json 與 .codex-plugin/plugin.json，發版時三處一併更新 -->
 
@@ -18,7 +18,7 @@ Tony 的 Skills。
 | Skill | 用途 |
 | --- | --- |
 | `herdr-dual-review` | 用 Herdr App 並行執行 Claude 與 Codex 原生 code review，交叉質詢單方發現，查證每條後彙整為附處理建議的 `REVIEW.md` |
-| `herdr-run-skill` | 經 Herdr App 把指定的 skill 或 slash 指令送進 Codex 或 Claude 執行，新開時直接帶在啟動參數，避開 `hc send` 標籤與 Git Bash 改寫指令 |
+| `herdr-run-skill` | 經 Herdr App 把指定的 skill 或 slash 指令送進 Codex 或 Claude 執行，新開時帶在啟動參數，既有的 agent 不帶 `<hc>` 標記送出，並避開 Git Bash 改寫指令 |
 | `herdr-read-reply` | 經 Herdr App 讀取另一個終端機的內容：依要看的東西選讀畫面或讀 agent 的對話紀錄原文，並附用 `hc` 取得指令輸出與結束代碼的寫法 |
 
 ## Herdr 協作規則（Claude Code）
@@ -43,7 +43,7 @@ Claude Code 在 Herdr App 的終端機啟動時（`HC_TERMINAL_ID` 有值），p
 agent 要透過 Herdr 叫 Codex 或 Claude 執行 skill 或 slash 指令時自動觸發，例如「用 herdr 交給 Codex 跑 `/mattpocock-skills:code-review ...`」或「叫右邊的 Claude agent 跑 `/simplify`」。要跑什麼、帶什麼參數由呼叫端決定，本 skill 只負責送達。
 
 1. 沿用既有的 agent，沒有就用 `hc run` 開在呼叫端同一個 tab，第一個指令直接帶在啟動參數。Codex 以 `--no-daemon -c check_for_update_on_startup=false -c features.hooks=false` 啟動，不跳 hook 信任畫面，也不執行 hook。
-2. 既有的 agent 用 `hc send`：Codex 送 `$skill`，Claude 寫成「請用 Skill 工具調用」，因為 `<hc>` 標籤會讓 slash 指令失效；Claude 內建 slash 指令用 `hc keys` 逐鍵輸入。
+2. 既有的 agent 用 `hc send`：要觸發 skill 或 slash 指令時，只在這次呼叫清掉 `HC_TERMINAL_ID`，不帶 `<hc>` 來源標記；一般對話一律保留標記。
 3. 從 PowerShell 送，或在 Git Bash 加 `MSYS_NO_PATHCONV=1`，避免 `/compact` 被改寫成 `C:/Program Files/Git/compact`。
 4. 照原樣執行指定的 skill，不換成內建的同類功能；Codex 用 `$skill`、Claude 用 `/skill`，名稱對不上就問使用者。
 5. 確認 agent 照流程進行後用 `hc wait` 等待完成，回報結果並保留 agent。選單與確認畫面一律交給使用者操作。
