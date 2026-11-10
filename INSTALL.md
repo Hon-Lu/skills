@@ -72,4 +72,4 @@ codex plugin list
 
 ### 前置需求
 
-`herdr-dual-review` 需要 Herdr、Claude Code CLI、Codex CLI 與 Python 3，主 agent 必須在 Herdr 的 pane 裡執行。
+`herdr-dual-review` 需要 Herdr App（含 `hc`）、Claude Code CLI、Codex CLI 與 Python 3，主 agent 必須在 Herdr App 的終端機裡執行。

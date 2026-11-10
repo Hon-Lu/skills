@@ -1,6 +1,6 @@
 ---
 name: herdr-dual-review
-description: 用 Herdr 並行執行 Claude 與 Codex 原生 code review，交叉質詢單方發現，查證每條後彙整為附處理建議的 REVIEW.md。僅在明確呼叫時使用，需指定目標分支與審查對象（自己的分支或別人的 MR）。
+description: 用 Herdr App 並行執行 Claude 與 Codex 原生 code review，交叉質詢單方發現，查證每條後彙整為附處理建議的 REVIEW.md。僅在明確呼叫時使用，需指定目標分支與審查對象（自己的分支或別人的 MR）。
 disable-model-invocation: true
 ---
 
@@ -17,7 +17,7 @@ disable-model-invocation: true
 
 ## 0. 前置檢查與解析輸入
 
-- 執行 `test "${HERDR_ENV:-}" = 1`（PowerShell：`$env:HERDR_ENV -eq '1'`）。不在 Herdr 裡就告知使用者並停止。
+- 執行 `test -n "${HC_TERMINAL_ID:-}"`（PowerShell：`[bool]$env:HC_TERMINAL_ID`）。不在 Herdr App 裡就告知使用者並停止。
 - 從使用者訊息取出：
   - **目標分支**（必填，例如「目標分支：dev」）。沒給就問。
   - **審查對象**（必填）：自己的分支，或別人的 MR。沒給就和目標分支一起問，開審查者之前確定。
@@ -42,12 +42,12 @@ python "SKILL_DIR/scripts/init_run.py" --base <目標分支>
 
 兩邊要同時跑：先送 Codex，再開 Claude。下面每個指令送出後都會馬上返回，不要加 `--wait`，也不要在中間等待。兩邊都送出後，才進入第 3 步。
 
-新 pane 的 ID 從回傳 JSON 的 `.result.pane.pane_id` 取得，不要自己推測。
+先用 `hc get "$HC_TERMINAL_ID"`（PowerShell 用 `$env:HC_TERMINAL_ID`）取得 `labels` 的 `herdr.space`、`herdr.tab`。下面的 `<位置>` 指 `--label herdr.space=<space> --label herdr.tab=<tab>`，讓審查者開在同一個 tab。名稱已被占用時改用 `-2` 結尾的名稱，後續指令都用同一個名稱。
 
-**Codex**（原生 review，在 pane 裡當一般指令執行，送出後就在背景跑）：
+**Codex**（原生 review，在 hc 終端機裡當一般指令執行，送出後就在背景跑）：
 
 ```bash
-herdr pane run <B> 'python "SKILL_DIR/scripts/codex_review.py" review --base "<base>" --run-dir "<run_dir>" [--model <m>] [--effort <e>]'
+hc run --bg --no-notify --name review-codex --cwd "<repo>" <位置> python "SKILL_DIR/scripts/codex_review.py" review --base "<base>" --run-dir "<run_dir>" [--model <m>] [--effort <e>]
 ```
 
 跑完會產生 `codex-review.md`，以及記錄結束碼和 session id 的 `codex-review.md.done.json`。
@@ -58,34 +58,31 @@ herdr pane run <B> 'python "SKILL_DIR/scripts/codex_review.py" review --base "<b
 
 ### Claude 主控
 
-```bash
-herdr pane split --current --direction right --cwd "<repo>" --no-focus      # → Codex 的 pane B
-```
-
 送出 Codex 指令後，用 Skill 工具呼叫 `code-review`，args 填 `high <base>...HEAD`。它會 fork 一個背景 agent 執行審查，立刻返回。審查過程留在那個 agent，不會進你的 context。
 
 ### Codex 主控
 
-```bash
-herdr pane split --current --direction right --cwd "<repo>" --no-focus      # → Claude 的 pane A
-herdr pane split <A> --direction down --cwd "<repo>" --no-focus             # → Codex 的 pane B
-```
-
-送出 Codex 指令後，開 Claude（互動式 agent，保留審查脈絡給之後質詢用）：
+送出 Codex 指令後，開 Claude（互動式 agent，保留審查脈絡給之後質詢用）。`/code-review` 要放在啟動參數：`hc send` 送出的內容會被包進 `<hc>` 標籤，slash 指令不會觸發。
 
 ```bash
-herdr agent start review-claude --kind claude --pane <A> -- --add-dir "<run_dir>" [--model <m>] [--effort <e>]
-herdr agent prompt review-claude "/code-review high <base>...HEAD"
-herdr agent prompt review-claude "code review 全部完成後（包含背景審查），<輸出規則> 還沒審完就等審完再寫。"
+hc run --bg --no-notify --outlive-parent --name review-claude --cwd "<repo>" <位置> claude --add-dir "<run_dir>" [--model <m>] [--effort <e>] "/code-review high <base>...HEAD"
+hc wait review-claude
 ```
 
-`agent prompt` 回傳的 `agent_session.value` 是 Claude 的 session id，記下來，報告會用到。
+`hc wait` 回傳的 `turn` 還是 `0` 就再等一次。等到第一回合結束後，用 `hc read --lines 0 review-claude` 看一次畫面：
 
-`agent start` 之後、送第一個 prompt 之前，先用 `herdr agent read review-claude --source visible --lines 20` 看一次畫面。Herdr 可能把啟動時的選單誤判成就緒，直接送 prompt 會把文字打進選單。
 - 如果是更新提示，選「只跳過這次更新」之類的選項，不要更新，也不要長期略過更新。
 - 如果是其他選單或確認畫面，照第 3 步 `blocked` 的方式處理，交給使用者。
 
-名稱 `review-claude` 已被占用時改用 `review-claude-2`，後續指令都用同一個名稱。第二個 prompt 送出時 Claude 可能還在忙，Claude Code 會先排隊，等手上的事做完再處理。審查有沒有完成一律看檔案，不看 agent 狀態：`/code-review` 會把審查丟到背景，agent 顯示 idle 時審查可能還在跑。
+確認沒有卡住後送出輸出規則：
+
+```bash
+hc send review-claude "code review 全部完成後（包含背景審查），<輸出規則> 還沒審完就等審完再寫。"
+```
+
+Claude 的 session id 用 `hc get review-claude` 的 `foreground.pid`，到 `~/.claude/sessions/<pid>.json` 讀 `sessionId`，記下來，報告會用到。
+
+審查有沒有完成一律看檔案，不看 agent 狀態：`/code-review` 會把審查丟到背景，agent 顯示 idle 時審查可能還在跑。
 
 ## 3. 等待：用腳本阻塞，不要看 pane
 
@@ -93,7 +90,7 @@ herdr agent prompt review-claude "code review 全部完成後（包含背景審�
 
 - 如果你能把指令放到背景執行、結束時自動收到通知（例如 Claude Code 的 `run_in_background`），就用背景執行，`--timeout-sec 3600`。等待期間不要做任何事。
 - 否則在前景執行，`--timeout-sec 540`。拿到 `timeout` 就原樣再呼叫一次。
-- 等待期間不要用 `herdr agent read` 或 `pane read` 看進度，那會把一整頁終端機畫面讀進 context。
+- 等待期間不要用 `hc read` 看進度，那會把一整頁終端機畫面讀進 context。
 
 ### Claude 主控
 
@@ -122,7 +119,7 @@ python "SKILL_DIR/scripts/wait_for.py" \
 依結果處理：
 
 - `done`：進入第 4 步。
-- `blocked`：審查者停在授權或提問畫面。這時才用 `herdr agent read <name> --source recent-unwrapped --lines 30` 看是什麼，轉告使用者，由使用者自己去那個 pane 回應。不要替使用者按同意。處理完再重新等待。
+- `blocked`：審查者停在授權或提問畫面。這時才用 `hc read --lines 0 <name>` 看是什麼，轉告使用者，由使用者自己去那個終端機回應。不要替使用者按同意。處理完再重新等待。
 - `missing`：審查者已結束。告知使用者，然後用現有的結果繼續。
 
 ## 4. 比對兩份結果
@@ -148,13 +145,13 @@ python "SKILL_DIR/scripts/wait_for.py" \
 2. 送出 Codex：
 
    ```bash
-   herdr pane run <B> 'python "SKILL_DIR/scripts/codex_review.py" ask --prompt-file "<run_dir>/crossexam-to-codex.md" --out "<run_dir>/crossexam-codex-answer.md" --session <codex-review.md.done.json 的 session_id> [--model <m>] [--effort <e>]'
+   hc run --bg --no-notify --name ask-codex --cwd "<repo>" <位置> python "SKILL_DIR/scripts/codex_review.py" ask --prompt-file "<run_dir>/crossexam-to-codex.md" --out "<run_dir>/crossexam-codex-answer.md" --session <codex-review.md.done.json 的 session_id> [--model <m>] [--effort <e>]
    ```
 
    `session_id` 如果是 null，就不帶 `--session`，腳本會改開一個新的唯讀 session。
 3. 送出 Claude：
    - Claude 主控：用 SendMessage 傳給第 3 步記下的 task id：「請讀 <run_dir>/crossexam-to-claude.md，照裡面的規則回覆。寫完只回一行「完成」，不要重述內容。」
-   - Codex 主控：`herdr agent prompt review-claude "請讀 <run_dir>/crossexam-to-claude.md，照裡面的規則回覆。"`
+   - Codex 主控：`hc send review-claude "請讀 <run_dir>/crossexam-to-claude.md，照裡面的規則回覆。"`
 4. 用第 3 步的方式等待：`--marker-file crossexam-claude-answer.md`、`--exists crossexam-codex-answer.md.done.json`。Claude 主控時先等 Claude 回覆「完成」的通知，再跑 `wait_for.py`，不帶 `--agent`。
 
 質詢到此結束。不把回覆再轉給原本的提出方，也不開第二輪。
@@ -197,12 +194,12 @@ python "SKILL_DIR/scripts/wait_for.py" \
 - **質詢**：只有送過質詢的條目才寫這一行。回覆不成立或不確定時，在前面加 ⚠，並附上對方的理由。
 - 樣板裡的示範條目要換成實際內容。
 
-最後用 `herdr pane close <B>` 關掉 Codex 的 pane。Claude 審查者保留，使用者逐條討論時可以接著問：Claude 主控時由你用 SendMessage 傳給 task id；Codex 主控時用 `herdr agent prompt <名稱>`。然後回覆使用者：
+最後用 `hc rm review-codex`、`hc rm ask-codex` 移除 Codex 已結束的終端機，沒跑質詢時只移除前者。Claude 審查者保留，使用者逐條討論時可以接著問：Claude 主控時由你用 SendMessage 傳給 task id；Codex 主控時用 `hc send <名稱>`。然後回覆使用者：
 
 - `REVIEW.md` 的完整路徑；別人的 MR 再加上 `MR-COMMENT.md` 的完整路徑
 - 建議摘要與總表，讓使用者可以直接回「修 1、3」，或問要討論哪一條
 - 標了 ⚠ 的條目，這些質詢有分歧
 - 查證時發現的新問題（有才寫）
-- Codex 主控時，Claude 審查者仍開著（名稱與 pane ID），討論完可以用 `herdr pane close <A>` 關掉
+- Codex 主控時，Claude 審查者仍開著（名稱與終端機位址），討論完可以用 `hc kill <名稱>`、`hc rm <名稱>` 關掉
 
 到這裡就停，要修哪些由使用者決定，程式碼等使用者指示才改。使用者做出決定後，把決定與理由寫進該條的 **決策** 一行；建議不修但使用者要修時，照使用者的決定。

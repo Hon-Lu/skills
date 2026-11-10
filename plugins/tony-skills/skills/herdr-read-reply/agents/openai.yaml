@@ -1,5 +1,5 @@
 interface:
   display_name: "Herdr Read Reply"
-  short_description: "Read an agent reply or terminal output from a Herdr pane"
+  short_description: "Read an agent reply or terminal output from a Herdr App terminal"
 policy:
   allow_implicit_invocation: true

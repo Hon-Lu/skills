@@ -1,6 +1,6 @@
 ﻿"""阻塞等待審查者完成，期間不輸出任何東西；結束時只印一行 JSON。
 
-完成訊號看檔案，不看 herdr 的 idle 狀態：Claude 的 /code-review 會把審查丟到背景，
+完成訊號看檔案，不看 hc 的 idle 狀態：Claude 的 /code-review 會把審查丟到背景，
 主對話可能先變 idle，審查其實還沒結束。
 
 用法：
@@ -27,30 +27,17 @@ def marker_ready(path):
         return False
 
 
-def find_key(obj, key):
-    if isinstance(obj, dict):
-        if key in obj:
-            return obj[key]
-        for v in obj.values():
-            r = find_key(v, key)
-            if r is not None:
-                return r
-    elif isinstance(obj, list):
-        for v in obj:
-            r = find_key(v, key)
-            if r is not None:
-                return r
-    return None
-
-
 def agent_status(name):
-    r = subprocess.run(["herdr", "agent", "get", name], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    r = subprocess.run(["hc", "get", name], capture_output=True, text=True, encoding="utf-8", errors="replace")
     if r.returncode != 0:
         return "missing"
     try:
-        return find_key(json.loads(r.stdout), "agent_status") or "unknown"
+        info = json.loads(r.stdout)
     except ValueError:
         return "unknown"
+    if info.get("state") != "live":
+        return "missing"
+    return (info.get("status") or {}).get("state") or "unknown"
 
 
 def main():

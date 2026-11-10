@@ -1,6 +1,6 @@
-﻿"""在 herdr pane 裡執行 Codex 原生 review 或質詢，結果寫檔，結束時寫 <輸出檔>.done.json。
+﻿"""在 hc 終端機裡執行 Codex 原生 review 或質詢，結果寫檔，結束時寫 <輸出檔>.done.json。
 
-  review：codex review --base <base>，stdout 同時顯示在 pane 並寫入 <run-dir>/codex-review.md
+  review：codex review --base <base>，stdout 同時顯示在終端機並寫入 <run-dir>/codex-review.md
   ask   ：接回 review 的 session（codex exec resume）回答質詢，保留它審過的脈絡；
           沒有 session id 時退回新開一個唯讀的 codex exec
 
@@ -63,7 +63,7 @@ def review(a, codex):
     print(f"[dual-review] Codex 審查中（base: {a.base}），完成前會持續顯示進度…", flush=True)
     with open(out, "w", encoding="utf-8") as fo, open(log, "w", encoding="utf-8") as fe:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
-        # 進度走 stderr；同步顯示在 pane 上，否則審查期間畫面一片空白
+        # 進度走 stderr；同步顯示在終端機上，否則審查期間畫面一片空白
         progress = threading.Thread(target=tee, args=(proc.stderr, fe))
         progress.start()
         tee(proc.stdout, fo)

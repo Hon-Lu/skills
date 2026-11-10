@@ -1,11 +1,11 @@
-﻿"""Herdr 管理的 pane 啟動 Claude Code 時，把 Herdr 協作規則帶入 context；不在 Herdr 內就不輸出。"""
+﻿"""Herdr App 的終端機啟動 Claude Code 時，把 Herdr 協作規則帶入 context；不在 Herdr App 內就不輸出。"""
 import json
 import os
 import sys
 
 
 def main() -> int:
-    if os.environ.get("HERDR_ENV") != "1":
+    if not os.environ.get("HC_TERMINAL_ID"):
         return 0
 
     rules_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "herdr-rules.md")
