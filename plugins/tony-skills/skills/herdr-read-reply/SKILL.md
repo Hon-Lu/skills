@@ -18,6 +18,8 @@ description: 經 Herdr App 讀取另一個終端機的內容：Claude 或 Codex 
 
 `HC_TERMINAL_ID` 沒有值就告知使用者並停止。
 
+本 skill 對應 herdr-app 0.1.14、hc 0.1.19。版本更新後行為不符時，以 `hc --skill`、`herdr-app --skill` 為準。
+
 ## 讀對話紀錄
 
 ```bash

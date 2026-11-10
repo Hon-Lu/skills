@@ -8,6 +8,8 @@ disable-model-invocation: true
 
 你是主 agent：負責開審查者、等待、轉送質詢、查證條目、寫報告。找問題是審查者的工作，你只查證他們列出的條目。
 
+本 skill 對應 herdr-app 0.1.14、hc 0.1.19。版本更新後行為不符時，以 `hc --skill`、`herdr-app --skill` 為準。
+
 以下 `SKILL_DIR` 指這份 SKILL.md 所在目錄（通常是 `~/.agents/skills/herdr-dual-review`）。
 
 流程依主 agent 分成兩條路線，第 2、3、5、7 步有差異，其餘相同：

@@ -7,6 +7,8 @@ description: 經 Herdr App 讓 Codex 或 Claude agent 執行指定的 skill 或 
 
 把呼叫端指定的 skill 或 slash 指令送進 Codex 或 Claude 執行。要跑哪個 skill、帶什麼參數由呼叫端決定，本 skill 只負責正確送達。Herdr App 的一般用法看 `hc --skill`（終端機與 agent）和 `herdr-app --skill`（視窗）。舊版 `herdr` CLI 的指令在 Herdr App 不適用。
 
+本 skill 對應 herdr-app 0.1.14、hc 0.1.19。版本更新後行為不符時，以 `hc --skill`、`herdr-app --skill` 為準。
+
 ## 前置
 
 - `HC_TERMINAL_ID` 沒有值就告知使用者並停止。

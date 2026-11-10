@@ -1,6 +1,7 @@
 # tony-skills
 
-套件版本：`v0.14.1`
+套件版本：`v0.14.2`
+對應 Herdr App：`herdr-app 0.1.14`、`hc 0.1.19`
 安裝教程：[INSTALL.md](./INSTALL.md)
 <!-- 版本對齊 plugins/tony-skills/.claude-plugin/plugin.json 與 .codex-plugin/plugin.json，發版時三處一併更新 -->
 
