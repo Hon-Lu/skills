@@ -23,17 +23,20 @@ description: 經 Herdr App 讀取另一個終端機的內容：Claude 或 Codex 
 ## 讀對話紀錄
 
 ```bash
-python "SKILL_DIR/scripts/read_reply.py" --target <位址或名稱> --out <輸出檔> [--turns N]
+python "SKILL_DIR/scripts/read_reply.py" --target <位址或名稱> --out <輸出檔> [--turns N] [--wait-sec 秒數] [--after 回合數]
 ```
 
 腳本從 `hc get` 的程序與目錄資訊找到對方的對話紀錄，把最近完成回合的回覆寫進 `--out`（UTF-8），stdout 只印一行 JSON。`--turns N` 取最近 N 回合，並附上每回合的使用者訊息（每則截到 1500 字）。輸出檔放系統 temp 或自己的暫存目錄，再用讀檔工具讀。
 
 `status`：
 
-- `ok`：讀 `out`。`running` 為 `true` 表示對方還有未完成的回合，讀到的是之前完成的那一回合。
+- `ok`：讀 `out`。`running` 為 `true` 表示對方還有未完成的回合，讀到的是之前完成的那一回合。`completed` 是目前完成的回合數。
 - `busy`：對方 `working` 或 `blocked`，等它停下來，或改讀畫面看它卡在哪。
 - `no_session`、`not_found`、`unsupported`、`error`：這個終端機讀不到紀錄，改讀畫面。
 - `stale`：找到的 session 已不是終端機目前的對話（例如對方 `/clear` 過），紀錄檔標題與終端機標題不同，改讀畫面。
+- `timeout`：只有帶 `--wait-sec` 才會出現，超過時間仍未完成，沒有寫檔。讀畫面確認對方還在工作，或停在選單、授權畫面。
+
+Codex 不回報狀態（hc 0.1.19 實測 `status` 一直是 `null`），`hc wait` 等不到它，也不會回 `busy`。要等 Codex 完成就帶 `--wait-sec`，腳本會等到完成的回合數超過 `--after`（預設 0）且沒有進行中的回合才寫檔。對既有的 Codex 送新訊息前，先跑一次腳本記下 `completed`（`not_found` 時是 0），等待時當作 `--after`。
 
 限制：
 

@@ -4,7 +4,11 @@
 stdout 只印一行 JSON，status 不是 ok 時改用 hc read 讀畫面。
 
 用法：
-  python read_reply.py --target <位址或名稱> --out <輸出檔> [--turns 1]
+  python read_reply.py --target <位址或名稱> --out <輸出檔> [--turns 1] [--wait-sec 秒數] [--after 回合數]
+
+--wait-sec 大於 0 時，等到完成的回合數超過 --after（預設 0）且沒有進行中的回合才寫檔。
+Codex 不回報狀態，hc wait 等不到它，要等 Codex 完成就用這個參數。
+輸出的 completed 是目前完成的回合數，送出新訊息前記下來，當作下一次的 --after。
 
 status：
   ok           已寫入 out；running 為 true 表示紀錄裡還有未完成的回合，寫入的是它之前完成的回合
@@ -13,6 +17,7 @@ status：
   not_found    找不到紀錄檔，或紀錄裡沒有完成的回合
   stale        Claude 的紀錄檔標題與終端機標題不同，找到的 session 已不是目前的對話
   unsupported  不是 Claude 或 Codex
+  timeout      超過 --wait-sec 仍未完成，沒有寫檔；改用 hc read 看對方是否停在選單或授權畫面
   error        hc 指令或解析失敗，message 有原因
 """
 import argparse
@@ -23,9 +28,12 @@ import os
 import re
 import subprocess
 import sys
+import time
 
 PROMPT_LIMIT = 1500
 AGENT_KINDS = {"claude-code": "claude", "codex": "codex"}
+PROGRAM_KINDS = {"claude": "claude", "codex": "codex"}
+WAIT_POLL_SEC = 3
 # Claude 還沒替對話取標題時的預設終端機標題，無法用來比對
 GENERIC_TITLES = {"", "claude", "Claude Code"}
 # Codex 的 rollout 開始時間可能略早於 hc 記錄的終端機建立時間
@@ -37,6 +45,31 @@ def hc_get(target):
     if result.returncode != 0:
         raise RuntimeError((result.stderr or result.stdout).strip())
     return json.loads(result.stdout)
+
+
+def program_stem(argv):
+    """取出程式名稱（不含路徑與副檔名）；npm 的 .cmd 包裝要看 cmd.exe /c 後面的指令。"""
+    if not argv:
+        return ""
+    program = argv[0].replace("\\", "/")
+    lowered = [arg.lower() for arg in argv]
+    if os.path.basename(program).lower() in ("cmd", "cmd.exe") and "/c" in lowered:
+        command = " ".join(argv[lowered.index("/c") + 1:]).strip()
+        program = command[1:].split('"')[0] if command.startswith('"') else command.split(" ")[0]
+        program = program.replace("\\", "/")
+    return os.path.splitext(os.path.basename(program))[0].lower()
+
+
+def agent_kind(info):
+    """優先用 agent 回報的 app；Codex 實測不回報狀態，改看前景程序與啟動指令。"""
+    kind = AGENT_KINDS.get((info.get("status") or {}).get("app"))
+    if kind:
+        return kind
+    for argv in ((info.get("foreground") or {}).get("argv"), info.get("argv")):
+        kind = PROGRAM_KINDS.get(program_stem(argv))
+        if kind:
+            return kind
+    return None
 
 
 def child_processes():
@@ -208,11 +241,65 @@ def write_turns(out, turns, include_prompts):
         f.write("\n\n".join(parts))
 
 
+def read_once(target):
+    """讀一次對方的紀錄；回傳 (status, 回報欄位, 完成的回合, 是否有進行中的回合, 終端機是否還活著)。"""
+    try:
+        info = hc_get(target)
+    except Exception as e:
+        return "error", {"message": str(e)}, [], False, False
+
+    live = info.get("state") == "live"
+    kind = agent_kind(info)
+    status = (info.get("status") or {}).get("state")
+    base = {"agent": kind, "terminal": info.get("address")}
+    if kind is None:
+        return "unsupported", base, [], False, live
+    if status in ("working", "blocked"):
+        return "busy", {"agent_status": status, **base}, [], False, live
+
+    if kind == "claude":
+        session_id = claude_session_id(info)
+        base["session_id"] = session_id
+        if not session_id:
+            return "no_session", base, [], False, live
+        path = claude_transcript(session_id)
+    else:
+        rollouts = codex_rollouts(info)
+        if len(rollouts) != 1:
+            return "no_session", {"candidates": len(rollouts), **base}, [], False, live
+        path, base["session_id"] = rollouts[0]
+    if not path:
+        return "not_found", {"completed": 0, **base}, [], False, live
+
+    # 終端機標題開頭可能帶 agent 的狀態符號
+    terminal_title = re.sub(r"^[^\w/\\]+", "", info.get("title") or "")
+    if kind == "claude" and terminal_title not in GENERIC_TITLES:
+        # 對話換過 session 時，比對標題可以避免讀到上一段對話
+        transcript_title = claude_title(path)
+        if transcript_title and transcript_title != terminal_title:
+            return "stale", {"terminal_title": terminal_title, "transcript_title": transcript_title, "transcript": path, **base}, [], False, live
+    try:
+        turns, pending = claude_turns(path) if kind == "claude" else codex_turns(path)
+    except Exception as e:
+        return "error", {"message": str(e), "transcript": path, **base}, [], False, live
+    if not turns:
+        return "not_found", {"completed": 0, "running": pending, "transcript": path, **base}, [], pending, live
+    return "ok", {"transcript": path, **base}, turns, pending, live
+
+
+def still_waiting(status, fields, live):
+    if not live or status not in ("ok", "busy", "not_found", "no_session"):
+        return False
+    return fields.get("candidates", 0) <= 1
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--target", required=True)
     parser.add_argument("--out", required=True)
     parser.add_argument("--turns", type=int, default=1)
+    parser.add_argument("--wait-sec", type=int, default=0)
+    parser.add_argument("--after", type=int, default=0)
     a = parser.parse_args()
 
     # 標題可能含主控台編碼印不出的字元，印不出的改成替代字元，不讓整支腳本中斷
@@ -221,50 +308,24 @@ def main():
     def report(status, **fields):
         print(json.dumps({"status": status, **fields}, ensure_ascii=False))
 
-    try:
-        info = hc_get(a.target)
-    except Exception as e:
-        return report("error", message=str(e))
+    deadline = time.monotonic() + a.wait_sec
+    status, fields, turns, pending, live = read_once(a.target)
+    while a.wait_sec > 0 and not (status == "ok" and not pending and len(turns) > a.after):
+        if not still_waiting(status, fields, live):
+            break
+        if time.monotonic() >= deadline:
+            fields.pop("completed", None)
+            fields.pop("running", None)
+            return report("timeout", completed=len(turns), running=pending, last_status=status, **fields)
+        time.sleep(WAIT_POLL_SEC)
+        status, fields, turns, pending, live = read_once(a.target)
 
-    agent_status = info.get("status") or {}
-    kind, status = AGENT_KINDS.get(agent_status.get("app")), agent_status.get("state")
-    base = {"agent": kind, "terminal": info.get("address")}
-    if kind is None:
-        return report("unsupported", **base)
-    if status in ("working", "blocked"):
-        return report("busy", agent_status=status, **base)
-
-    if kind == "claude":
-        session_id = claude_session_id(info)
-        base["session_id"] = session_id
-        if not session_id:
-            return report("no_session", **base)
-        path = claude_transcript(session_id)
-    else:
-        rollouts = codex_rollouts(info)
-        if len(rollouts) != 1:
-            return report("no_session", candidates=len(rollouts), **base)
-        path, base["session_id"] = rollouts[0]
-    if not path:
-        return report("not_found", **base)
-
-    # 終端機標題開頭可能帶 agent 的狀態符號
-    terminal_title = re.sub(r"^[^\w/\\]+", "", info.get("title") or "")
-    if kind == "claude" and terminal_title not in GENERIC_TITLES:
-        # 對話換過 session 時，比對標題可以避免讀到上一段對話
-        transcript_title = claude_title(path)
-        if transcript_title and transcript_title != terminal_title:
-            return report("stale", terminal_title=terminal_title, transcript_title=transcript_title, transcript=path, **base)
-    try:
-        turns, pending = claude_turns(path) if kind == "claude" else codex_turns(path)
-    except Exception as e:
-        return report("error", message=str(e), transcript=path, **base)
-    if not turns:
-        return report("not_found", transcript=path, **base)
+    if status != "ok":
+        return report(status, **fields)
 
     picked = turns[-max(a.turns, 1):]
     write_turns(a.out, picked, include_prompts=a.turns > 1)
-    report("ok", out=a.out, turns=len(picked), running=pending, chars=os.path.getsize(a.out), transcript=path, **base)
+    report("ok", out=a.out, turns=len(picked), completed=len(turns), running=pending, chars=os.path.getsize(a.out), **fields)
 
 
 if __name__ == "__main__":

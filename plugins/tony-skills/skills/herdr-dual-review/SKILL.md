@@ -68,10 +68,10 @@ hc run --bg --no-notify --name review-codex --cwd "<repo>" <位置> python "SKIL
 
 ```bash
 hc run --bg --no-notify --outlive-parent --name review-claude --cwd "<repo>" <位置> claude --add-dir "<run_dir>" [--model <m>] [--effort <e>] "/code-review high <base>...HEAD"
-hc wait review-claude
+hc wait review-claude --timeout 30
 ```
 
-`hc wait` 回傳的 `turn` 還是 `0` 就再等一次。等到第一回合結束後，用 `hc read --lines 0 review-claude` 看一次畫面：
+回傳的 `status` 是 `null` 時，Claude 可能停在資料夾信任或更新畫面，用 `hc read --lines 0 review-claude` 看一次，有畫面要處理就照下面的規則，還在啟動就再等。`status` 有值但 `turn` 還是 `0` 也再等一次。等到第一回合結束後，用 `hc read --lines 0 review-claude` 看一次畫面：
 
 - 如果是更新提示，選「只跳過這次更新」之類的選項，不要更新，也不要長期略過更新。
 - 如果是其他選單或確認畫面，照第 3 步 `blocked` 的方式處理，交給使用者。

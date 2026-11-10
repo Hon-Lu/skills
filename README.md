@@ -1,6 +1,6 @@
 # tony-skills
 
-套件版本：`v0.14.2`
+套件版本：`v0.15.0`
 對應 Herdr App：`herdr-app 0.1.14`、`hc 0.1.19`
 安裝教程：[INSTALL.md](./INSTALL.md)
 <!-- 版本對齊 plugins/tony-skills/.claude-plugin/plugin.json 與 .codex-plugin/plugin.json，發版時三處一併更新 -->
@@ -19,8 +19,8 @@ Tony 的 Skills。
 | Skill | 用途 |
 | --- | --- |
 | `herdr-dual-review` | 用 Herdr App 並行執行 Claude 與 Codex 原生 code review，交叉質詢單方發現，查證每條後彙整為附處理建議的 `REVIEW.md` |
-| `herdr-run-skill` | 經 Herdr App 把指定的 skill 或 slash 指令送進 Codex 或 Claude 執行，新開時帶在啟動參數，既有的 agent 不帶 `<hc>` 標記送出，並避開 Git Bash 改寫指令 |
-| `herdr-read-reply` | 經 Herdr App 讀取另一個終端機的內容：依要看的東西選讀畫面或讀 agent 的對話紀錄原文，並附用 `hc` 取得指令輸出與結束代碼的寫法 |
+| `herdr-run-skill` | 經 Herdr App 把指定的 skill 或 slash 指令送進 Codex 或 Claude 執行，新開時帶在啟動參數，既有的 agent 不帶 `<hc>` 標記送出，並避開 Git Bash 改寫指令；Codex 不回報狀態，改等對話紀錄完成 |
+| `herdr-read-reply` | 經 Herdr App 讀取另一個終端機的內容：依要看的東西選讀畫面或讀 agent 的對話紀錄原文，可等待 Codex 回合完成，並附用 `hc` 取得指令輸出與結束代碼的寫法 |
 
 ## Herdr 協作規則（Claude Code）
 

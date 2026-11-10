@@ -9,6 +9,8 @@ description: 經 Herdr App 讓 Codex 或 Claude agent 執行指定的 skill 或 
 
 本 skill 對應 herdr-app 0.1.14、hc 0.1.19。版本更新後行為不符時，以 `hc --skill`、`herdr-app --skill` 為準。
 
+以下 `SKILL_DIR` 指這份 SKILL.md 所在目錄。
+
 ## 前置
 
 - `HC_TERMINAL_ID` 沒有值就告知使用者並停止。
@@ -51,7 +53,7 @@ hc run --bg --json --name <名稱> --outlive-parent --cwd "<目錄>" --label her
 
 ```bash
 env -u HC_TERMINAL_ID MSYS_NO_PATHCONV=1 hc send --wait <名稱> '/<plugin>:<skill> <參數>'    # Claude
-env -u HC_TERMINAL_ID hc send --wait <名稱> '$<skill> <參數>'                               # Codex
+env -u HC_TERMINAL_ID hc send <名稱> '$<skill> <參數>'                                      # Codex：不加 --wait，見「送出之後」
 ```
 
 ```powershell
@@ -61,6 +63,7 @@ $sender = $env:HC_TERMINAL_ID; Remove-Item Env:HC_TERMINAL_ID; hc send --wait <�
 - 內建 slash 指令（例如 `/compact`）用同樣的寫法。
 - 這是實測 hc 0.1.19 的行為，文件沒有保證。送出後用 `hc read --lines 0 <名稱>` 確認對方有觸發；出現 `<hc from=` 或對方把它當一般訊息，就停下來轉告使用者，改請使用者親自輸入。
 - 少了標記，對方看不出訊息來自 agent。代使用者轉述時，要在參數裡說明來源。
+- `hc get` 的 `status` 是 `null` 時，`hc send` 不會擋下：對方若停在信任或選單畫面，Enter 會直接回答它（實測把 Claude 的信任畫面答成「No, exit」）。送出前先用 `hc read --lines 0 <名稱>` 確認對方停在輸入框。
 
 ## 從哪個 shell 送
 
@@ -76,10 +79,27 @@ $sender = $env:HC_TERMINAL_ID; Remove-Item Env:HC_TERMINAL_ID; hc send --wait <�
 
 ## 送出之後
 
-- 用 `hc wait <名稱>` 等待，不要反覆讀畫面看進度。
-  - 新開的 agent 在第一個 prompt 開始前，`hc wait` 可能立刻回 `idle`。回傳的 `turn` 還是 `0` 就再等一次。
-  - `reason` 是 `timeout` 只是到了回報時間，再等一次。
-  - `status` 是 `blocked`，或 `hc get` 的 `status` 一直是 `null`：對方可能停在選單或授權畫面，用 `hc read --lines 0 <名稱>` 看畫面，照「操作界線」處理。
+等待方式依對方而定，不要反覆讀畫面看進度。
+
+**新開的 agent 先確認有開起來**：`hc wait <名稱> --timeout 30`。回傳的 `status` 是 `null` 時，用 `hc read --lines 0 <名稱>` 看一次畫面。停在資料夾信任、選單或授權畫面，就照「操作界線」處理；正在啟動或工作，就往下等。
+
+**Claude**：用 `hc wait <名稱>`（既有的 agent 用 `hc send --wait`）。
+
+- `status` 有值但 `turn` 還是 `0`：第一個 prompt 還沒開始，再等一次。
+- `reason` 是 `timeout` 只是到了回報時間，再等一次。
+- `status` 是 `blocked`：用 `hc read --lines 0 <名稱>` 看畫面，照「操作界線」處理。
+
+**Codex**：hc 0.1.19 實測收不到 Codex 的狀態，`status` 一直是 `null`、`turn` 一直是 `0`，`hc wait` 和 `hc send --wait` 只會等到逾時。改等它的對話紀錄：
+
+```bash
+python "SKILL_DIR/../herdr-read-reply/scripts/read_reply.py" --target <名稱> --out <暫存檔> --wait-sec 540 [--after <N>]
+```
+
+- 新開的 agent 不帶 `--after`。
+- 既有的 agent 要在 `hc send` 之前，先不帶 `--wait-sec` 跑一次，記下 `completed`（`not_found` 時是 0）當作 `<N>`。
+- `status` 是 `ok`：回覆已寫進 `--out`。
+- `status` 是 `timeout`：用 `hc read --lines 0 <名稱>` 看畫面。還在工作就再跑一次，停在選單或授權畫面就照「操作界線」處理。
+
 - 讀回應，確認對方有照該 skill 的流程進行。看出誤解就立刻 `hc interrupt <名稱>` 中斷並回報使用者。
 - 完成後讀結果回報使用者，並附上終端機位址；agent 保留不關，方便接著問。回覆長、要原文時看 `herdr-read-reply`。
 
