@@ -76,6 +76,12 @@ $sender = $env:HC_TERMINAL_ID; Remove-Item Env:HC_TERMINAL_ID; hc send --wait <�
 - Codex 的 skill 一律用 `$` 觸發：呼叫端給的 `/xxx` 若是 skill 而不是 Codex 的 slash 指令，改成 `$xxx`。
 - Claude 的 skill 與 slash 指令都用 `/` 觸發，plugin 內的 skill 寫成 `/<plugin>:<skill>`：呼叫端給的 `$xxx` 改成 `/xxx`。
 - 指令只給短名、或可能有多個同名 skill 時，傳完整名稱；對不上就停下來問使用者，不要猜。
+- 送給 Claude 時，呼叫端給的 `/<plugin>:<skill>` 就是原生寫法，直接送出，不用另外查名稱。
+- 送給 Codex 時，skill 在 Codex 的名稱可能與 Claude 不同（例如 plugin 前綴）。不確定時依序查，查到就停：
+  1. `~/.codex/history.jsonl` 裡過去觸發過的寫法，例如 `grep -o '\$[^ "]*<skill>[^ "]*' ~/.codex/history.jsonl | sort | uniq -c`。
+  2. 列出 `~/.codex/skills` 等設定目錄。
+  3. 都找不到就停下來問使用者。
+  不要對 `~/.codex` 整個目錄遞迴搜尋：底下的 sessions 對話紀錄很大，指令會卡住數分鐘。
 
 ## 送出之後
 
