@@ -7,7 +7,7 @@ description: 經 Herdr App 讓 Codex 或 Claude agent 執行指定的 skill 或 
 
 把呼叫端指定的 skill 或 slash 指令送進 Codex 或 Claude 執行。要跑哪個 skill、帶什麼參數由呼叫端決定，本 skill 只負責正確送達。Herdr App 的一般用法看 `hc --skill`（終端機與 agent）和 `herdr-app --skill`（視窗）。舊版 `herdr` CLI 的指令在 Herdr App 不適用。
 
-本 skill 對應 herdr-app 0.1.14、hc 0.1.19。版本更新後行為不符時，以 `hc --skill`、`herdr-app --skill` 為準。
+本 skill 對應 herdr-app 0.1.14、hc 0.1.19；`keep_beside.py` 實測於 herdr-app 0.1.16、hc 0.1.21。版本更新後行為不符時，以 `hc --skill`、`herdr-app --skill` 為準。
 
 以下 `SKILL_DIR` 指這份 SKILL.md 所在目錄。
 
@@ -18,30 +18,30 @@ description: 經 Herdr App 讓 Codex 或 Claude agent 執行指定的 skill 或 
 
 ## 新開 agent：第一個指令直接帶在啟動參數
 
-用 `hc run` 啟動時把 skill 當第一個 prompt 帶入，不必等就緒，也不會被補全選單吃掉。
-
-先取得呼叫端所在的位置，讓 agent 開在同一個 tab：
-
-```bash
-hc get "$HC_TERMINAL_ID"    # labels 裡的 herdr.space、herdr.tab；PowerShell 用 $env:HC_TERMINAL_ID
-```
+用 `hc run --bg` 在背景啟動，把 skill 當第一個 prompt 帶入，不必等就緒，也不會被補全選單吃掉。啟動後放進呼叫端所在的 tab，不開新 tab。
 
 Codex：
 
 ```bash
-hc run --bg --json --name <名稱> --outlive-parent --cwd "<目錄>" --label herdr.space=<space> --label herdr.tab=<tab> codex --no-daemon -c check_for_update_on_startup=false -c features.hooks=false '$<skill> <參數>'
+hc run --bg --json --name <名稱> --outlive-parent --cwd "<目錄>" codex --no-daemon -c check_for_update_on_startup=false -c features.hooks=false '$<skill> <參數>'
 ```
 
 Claude：
 
 ```bash
-hc run --bg --json --name <名稱> --outlive-parent --cwd "<目錄>" --label herdr.space=<space> --label herdr.tab=<tab> claude '/<plugin>:<skill> <參數>'
+hc run --bg --json --name <名稱> --outlive-parent --cwd "<目錄>" claude '/<plugin>:<skill> <參數>'
+```
+
+接著放進 pane：
+
+```bash
+python "SKILL_DIR/scripts/keep_beside.py" --target <名稱>
 ```
 
 - `--no-daemon`：Codex 必加，否則它的指令會跑在 hc 之外。
 - `-c features.hooks=false`：這個 Codex 不執行任何 hook，也不會跳 hook 信任畫面。不要改用 `--dangerously-bypass-hook-trust`，那會執行未經信任的 hook。
 - `--outlive-parent`：呼叫端結束後 agent 仍保留，方便接著問。
-- 不要用 `herdr-app do terminal.open` 開 agent：它沒有指定位置的參數，會開到使用者目前焦點所在的 tab。
+- 不要直接用 `herdr-app do terminal.open` 或 `terminal.keep`：它們沒有指定 tab 的參數，會開到使用者目前焦點所在的 tab。`keep_beside.py` 先把焦點移到呼叫端、放好後再還給使用者。
 - 名稱已被占用時換一個，例如加 `-2`，後續指令都用同一個名稱。
 - 啟動參數不經過 `hc send`，對方收到的內容沒有 `<hc>` 來源標記。代使用者轉述時，要在參數裡說明來源。
 

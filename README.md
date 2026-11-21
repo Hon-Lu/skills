@@ -1,6 +1,6 @@
 # tony-skills
 
-套件版本：`v0.15.1`
+套件版本：`v0.16.0`
 對應 Herdr App：`herdr-app 0.1.14`、`hc 0.1.19`
 安裝教程：[INSTALL.md](./INSTALL.md)
 <!-- 版本對齊 plugins/tony-skills/.claude-plugin/plugin.json 與 .codex-plugin/plugin.json，發版時三處一併更新 -->
@@ -24,7 +24,7 @@ Tony 的 Skills。
 
 ## Herdr 協作規則（Claude Code）
 
-Claude Code 在 Herdr App 的終端機啟動時（`HC_TERMINAL_ID` 有值），plugin 的 SessionStart hook 會把 `plugins/tony-skills/hooks-handlers/herdr-rules.md` 帶入 context：轉述給其他 agent 時表明身分、不代替使用者確認、一次性代工改用 sub-agent。新開 session、resume、`/clear` 與 context 壓縮後都會重新帶入；不在 Herdr App 內不輸出。修改規則檔後，已開著的 session 要等下一次觸發才會讀到新版。Codex 不支援，需要 `python` 在 PATH 上。
+Claude Code 在 Herdr App 的終端機啟動時（`HC_TERMINAL_ID` 有值），plugin 的 SessionStart hook 會把 `plugins/tony-skills/hooks-handlers/herdr-rules.md` 帶入 context：轉述給其他 agent 時表明身分、不代替使用者確認、一次性代工改用 sub-agent，開 Herdr agent 時用 `hc run --bg` 再放進自己所在的 tab（`keep_beside.py`），不開新 tab。新開 session、resume、`/clear` 與 context 壓縮後都會重新帶入；不在 Herdr App 內不輸出。修改規則檔後，已開著的 session 要等下一次觸發才會讀到新版。Codex 不支援，需要 `python` 在 PATH 上。
 
 ### herdr-dual-review
 
@@ -43,7 +43,7 @@ Claude Code 在 Herdr App 的終端機啟動時（`HC_TERMINAL_ID` 有值），p
 
 agent 要透過 Herdr 叫 Codex 或 Claude 執行 skill 或 slash 指令時自動觸發，例如「用 herdr 交給 Codex 跑 `/mattpocock-skills:code-review ...`」或「叫右邊的 Claude agent 跑 `/simplify`」。要跑什麼、帶什麼參數由呼叫端決定，本 skill 只負責送達。
 
-1. 沿用既有的 agent，沒有就用 `hc run` 開在呼叫端同一個 tab，第一個指令直接帶在啟動參數。Codex 以 `--no-daemon -c check_for_update_on_startup=false -c features.hooks=false` 啟動，不跳 hook 信任畫面，也不執行 hook。
+1. 沿用既有的 agent，沒有就用 `hc run --bg` 開，第一個指令直接帶在啟動參數，再用 `keep_beside.py` 放進呼叫端所在的 tab，不會開到使用者正在看的別的 tab。Codex 以 `--no-daemon -c check_for_update_on_startup=false -c features.hooks=false` 啟動，不跳 hook 信任畫面，也不執行 hook。
 2. 既有的 agent 用 `hc send`：要觸發 skill 或 slash 指令時，只在這次呼叫清掉 `HC_TERMINAL_ID`，不帶 `<hc>` 來源標記；一般對話一律保留標記。
 3. 從 PowerShell 送，或在 Git Bash 加 `MSYS_NO_PATHCONV=1`，避免 `/compact` 被改寫成 `C:/Program Files/Git/compact`。
 4. 照原樣執行指定的 skill，不換成內建的同類功能；Codex 用 `$skill`、Claude 用 `/skill`，名稱對不上就問使用者。

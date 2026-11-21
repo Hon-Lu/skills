@@ -44,7 +44,7 @@ python "SKILL_DIR/scripts/init_run.py" --base <目標分支>
 
 兩邊要同時跑：先送 Codex，再開 Claude。下面每個指令送出後都會馬上返回，不要加 `--wait`，也不要在中間等待。兩邊都送出後，才進入第 3 步。
 
-先用 `hc get "$HC_TERMINAL_ID"`（PowerShell 用 `$env:HC_TERMINAL_ID`）取得 `labels` 的 `herdr.space`、`herdr.tab`。下面的 `<位置>` 指 `--label herdr.space=<space> --label herdr.tab=<tab>`，讓審查者開在同一個 tab。名稱已被占用時改用 `-2` 結尾的名稱，後續指令都用同一個名稱。
+先用 `hc get "$HC_TERMINAL_ID"`（PowerShell 用 `$env:HC_TERMINAL_ID`）取得 `labels` 的 `herdr.space`、`herdr.tab`。下面的 `<位置>` 指 `--label herdr.space=<space> --label herdr.tab=<tab>`，讓 Codex 的腳本歸在同一個 tab，在背景跑、沒有 pane。互動式的 Claude 審查者則放進呼叫端所在的 tab，見「Codex 主控」。名稱已被占用時改用 `-2` 結尾的名稱，後續指令都用同一個名稱。
 
 **Codex**（原生 review，在 hc 終端機裡當一般指令執行，送出後就在背景跑）：
 
@@ -67,9 +67,12 @@ hc run --bg --no-notify --name review-codex --cwd "<repo>" <位置> python "SKIL
 送出 Codex 指令後，開 Claude（互動式 agent，保留審查脈絡給之後質詢用）。`/code-review` 要放在啟動參數：`hc send` 送出的內容會被包進 `<hc>` 標籤，slash 指令不會觸發。
 
 ```bash
-hc run --bg --no-notify --outlive-parent --name review-claude --cwd "<repo>" <位置> claude --add-dir "<run_dir>" [--model <m>] [--effort <e>] "/code-review high <base>...HEAD"
+hc run --bg --no-notify --outlive-parent --name review-claude --cwd "<repo>" claude --add-dir "<run_dir>" [--model <m>] [--effort <e>] "/code-review high <base>...HEAD"
+python "SKILL_DIR/../herdr-run-skill/scripts/keep_beside.py" --target review-claude
 hc wait review-claude --timeout 30
 ```
+
+`keep_beside.py` 把它放進你所在的 tab，讓使用者看得到審查過程。沒放成時審查者照常在背景跑，不影響後續步驟。不要直接用 `herdr-app do terminal.keep`：它會開在使用者目前焦點的 tab。
 
 回傳的 `status` 是 `null` 時，Claude 可能停在資料夾信任或更新畫面，用 `hc read --lines 0 review-claude` 看一次，有畫面要處理就照下面的規則，還在啟動就再等。`status` 有值但 `turn` 還是 `0` 也再等一次。等到第一回合結束後，用 `hc read --lines 0 review-claude` 看一次畫面：
 

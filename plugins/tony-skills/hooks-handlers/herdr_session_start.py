@@ -15,6 +15,12 @@ def main() -> int:
     except OSError:
         # 規則檔遺失時不擋 session 啟動
         return 0
+    # 規則裡的腳本路徑隨 plugin 安裝位置而變，啟動時才填入
+    keep_beside = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "skills", "herdr-run-skill", "scripts", "keep_beside.py",
+    )
+    rules = rules.replace("KEEP_BESIDE_PY", keep_beside.replace("\\", "/"))
 
     output = {
         "hookSpecificOutput": {

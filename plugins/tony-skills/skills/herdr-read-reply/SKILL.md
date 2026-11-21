@@ -58,4 +58,4 @@ hc read --lines 200 <名稱>
 hc rm <名稱>                # 讀完後移除
 ```
 
-等待輸出出現用 `hc wait <名稱> --output <文字>`，只比對開始等待之後才印出的內容，不要用 sleep 或反覆讀畫面。要讓使用者看到這個終端機時，加上 `--label herdr.space=<space> --label herdr.tab=<tab>`，值取自 `hc get "$HC_TERMINAL_ID"` 的 `labels`。
+等待輸出出現用 `hc wait <名稱> --output <文字>`，只比對開始等待之後才印出的內容，不要用 sleep 或反覆讀畫面。背景的終端機沒有 pane，使用者看不到。要讓使用者看到時，啟動後用 `python "SKILL_DIR/../herdr-run-skill/scripts/keep_beside.py" --target <名稱>` 放進你所在的 tab。
