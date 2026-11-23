@@ -18,7 +18,7 @@ description: 經 Herdr App 讓 Codex 或 Claude agent 執行指定的 skill 或 
 
 ## 新開 agent：第一個指令直接帶在啟動參數
 
-用 `hc run --bg` 在背景啟動，把 skill 當第一個 prompt 帶入，不必等就緒，也不會被補全選單吃掉。啟動後放進呼叫端所在的 tab，不開新 tab。
+用 `hc run --bg` 在背景啟動，把 skill 當第一個 prompt 帶入，不必等就緒，也不會被補全選單吃掉。預設留在背景，沒有 pane；使用者要求顯示時，才放進呼叫端所在的 tab，不開新 tab。
 
 Codex：
 
@@ -32,7 +32,7 @@ Claude：
 hc run --bg --json --name <名稱> --outlive-parent --cwd "<目錄>" claude '/<plugin>:<skill> <參數>'
 ```
 
-接著放進 pane：
+使用者要求顯示時，再放進 pane：
 
 ```bash
 python "SKILL_DIR/scripts/keep_beside.py" --target <名稱>

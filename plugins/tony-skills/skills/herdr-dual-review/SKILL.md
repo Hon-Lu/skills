@@ -68,11 +68,10 @@ hc run --bg --no-notify --name review-codex --cwd "<repo>" <位置> python "SKIL
 
 ```bash
 hc run --bg --no-notify --outlive-parent --name review-claude --cwd "<repo>" claude --add-dir "<run_dir>" [--model <m>] [--effort <e>] "/code-review high <base>...HEAD"
-python "SKILL_DIR/../herdr-run-skill/scripts/keep_beside.py" --target review-claude
 hc wait review-claude --timeout 30
 ```
 
-`keep_beside.py` 把它放進你所在的 tab，讓使用者看得到審查過程。沒放成時審查者照常在背景跑，不影響後續步驟。不要直接用 `herdr-app do terminal.keep`：它會開在使用者目前焦點的 tab。
+審查者預設留在背景，沒有 pane。使用者要求看審查過程時，才用 `python "SKILL_DIR/../herdr-run-skill/scripts/keep_beside.py" --target review-claude` 放進你所在的 tab；沒放成時審查者照常在背景跑，不影響後續步驟。不要直接用 `herdr-app do terminal.keep`：它會開在使用者目前焦點的 tab。
 
 回傳的 `status` 是 `null` 時，Claude 可能停在資料夾信任或更新畫面，用 `hc read --lines 0 review-claude` 看一次，有畫面要處理就照下面的規則，還在啟動就再等。`status` 有值但 `turn` 還是 `0` 也再等一次。等到第一回合結束後，用 `hc read --lines 0 review-claude` 看一次畫面：
 
