@@ -6,3 +6,4 @@
 - 需要使用者本人確認的事（例如結束某個階段、權限、需求取捨），不代替使用者回答，請對方等使用者親自回覆。
 - 一次性代工（例如補一支測試）用 sub-agent，不開 Herdr 終端機；Herdr 終端機留給需要使用者旁觀或互動的長駐 agent。
 - 開 Herdr agent 用 `hc run --bg`，預設留在背景，不放進 pane。使用者要求顯示時，才用 `python "KEEP_BESIDE_PY" --target <名稱>` 放進你所在的 tab，不開新 tab。直接用 `herdr-app do terminal.keep` 或 `terminal.open` 會開到使用者目前在看的 tab，不一定是你的。
+- 經 `hc` 派工時，要求對方完成、停下等使用者確認或卡住時用 `hc send <你的位址>` 回報；收到這類要求（或 `reach`）就照做，回報結果而不是只回「收到」。需要結果才能往下時才 `hc wait`，否則照常做事，回報會進到你的輸入。

@@ -1,7 +1,7 @@
 # tony-skills
 
-套件版本：`v0.18.0`
-對應 Herdr App：`herdr-app 0.1.14`、`hc 0.1.19`
+套件版本：`v0.19.0`
+對應 Herdr App：`herdr-app 0.1.16`、`hc 0.1.22`
 安裝教程：[INSTALL.md](./INSTALL.md)
 <!-- 版本對齊 plugins/tony-skills/.claude-plugin/plugin.json 與 .codex-plugin/plugin.json，發版時三處一併更新 -->
 
@@ -19,12 +19,12 @@ Tony 的 Skills。
 | Skill | 用途 |
 | --- | --- |
 | `herdr-dual-review` | 用 Herdr App 並行執行 Claude 與 Codex 原生 code review，交叉質詢單方發現，查證每條後彙整為附處理建議的 `REVIEW.md` |
-| `herdr-run-skill` | 經 Herdr App 把指定的 skill 或 slash 指令送進 Codex 或 Claude 執行，新開時帶在啟動參數，既有的 agent 不帶 `<hc>` 標記送出，並避開 Git Bash 改寫指令；Codex 不回報狀態，改等對話紀錄完成 |
-| `herdr-read-reply` | 經 Herdr App 讀取另一個終端機的內容：依要看的東西選讀畫面或讀 agent 的對話紀錄原文，可等待 Codex 回合完成，並附用 `hc` 取得指令輸出與結束代碼的寫法 |
+| `herdr-run-skill` | 經 Herdr App 把指定的 skill 或 slash 指令送進 Codex 或 Claude 執行，新開時帶在啟動參數，既有的 agent 不帶 `<hc>` 標記送出，兩者都附上回報要求，並避開 Git Bash 改寫指令 |
+| `herdr-read-reply` | 經 Herdr App 讀取另一個 agent 的回覆：依要看的東西選讀畫面或讀對話紀錄原文 |
 
 ## Herdr 協作規則（Claude Code）
 
-Claude Code 在 Herdr App 的終端機啟動時（`HC_TERMINAL_ID` 有值），plugin 的 SessionStart hook 會把 `plugins/tony-skills/hooks-handlers/herdr-rules.md` 帶入 context：轉述給其他 agent 時表明身分、不代替使用者確認、一次性代工改用 sub-agent，開 Herdr agent 時用 `hc run --bg` 留在背景，使用者要求顯示時才放進自己所在的 tab（`keep_beside.py`），不開新 tab。新開 session、resume、`/clear` 與 context 壓縮後都會重新帶入；不在 Herdr App 內不輸出。修改規則檔後，已開著的 session 要等下一次觸發才會讀到新版。Codex 不支援，需要 `python` 在 PATH 上。
+Claude Code 在 Herdr App 的終端機啟動時（`HC_TERMINAL_ID` 有值），plugin 的 SessionStart hook 會把 `plugins/tony-skills/hooks-handlers/herdr-rules.md` 帶入 context：轉述給其他 agent 時表明身分、不代替使用者確認、一次性代工改用 sub-agent，開 Herdr agent 時用 `hc run --bg` 留在背景，使用者要求顯示時才放進自己所在的 tab（`keep_beside.py`），不開新 tab；照 hc 的標準流程，派工時要求對方完成、停下或卡住時用 `hc send` 回報，收到要求就照做，需要結果才 `hc wait`。新開 session、resume、`/clear` 與 context 壓縮後都會重新帶入；不在 Herdr App 內不輸出。修改規則檔後，已開著的 session 要等下一次觸發才會讀到新版。Codex 不支援，需要 `python` 在 PATH 上。
 
 ### herdr-dual-review
 
@@ -47,15 +47,14 @@ agent 要透過 Herdr 叫 Codex 或 Claude 執行 skill 或 slash 指令時自�
 2. 既有的 agent 用 `hc send`：要觸發 skill 或 slash 指令時，只在這次呼叫清掉 `HC_TERMINAL_ID`，不帶 `<hc>` 來源標記；一般對話一律保留標記。
 3. 從 PowerShell 送，或在 Git Bash 加 `MSYS_NO_PATHCONV=1`，避免 `/compact` 被改寫成 `C:/Program Files/Git/compact`。
 4. 照原樣執行指定的 skill，不換成內建的同類功能；Codex 用 `$skill`、Claude 用 `/skill`，名稱對不上就問使用者。
-5. 確認 agent 照流程進行後用 `hc wait` 等待完成，回報結果並保留 agent。選單與確認畫面一律交給使用者操作。
+5. 觸發 skill 的訊息沒有 `<hc>` 標記的 `reach`，所以在參數後附上 hc 標準的回報要求，對方停下時會用 `hc send` 回報。呼叫端要拿到結果才能往下時才用 `hc wait` 等待，否則不等；回報結果並保留 agent。選單與確認畫面一律交給使用者操作。
 
 ### herdr-read-reply
 
-agent 要看另一個終端機的內容時自動觸發，例如「看一下右邊的 agent 回了什麼」，或要在終端機跑指令並取得結果。
+agent 要看另一個 agent 的回覆時自動觸發，例如「看一下右邊的 agent 回了什麼」。
 
 1. 依要看的東西選來源：狀態列、選單、短回覆讀畫面；長報告、要逐字引用或前幾回合的問答，用 `read_reply.py` 讀 Claude 或 Codex 的對話紀錄原文。
 2. `read_reply.py` 把回覆寫成 UTF-8 檔，只回一行 JSON 狀態；讀不到紀錄時改讀畫面。
-3. 指令用 `hc exec`，或 `hc run` 加 `hc wait` 取得輸出與結束代碼。
 
 ## 前置需求
 

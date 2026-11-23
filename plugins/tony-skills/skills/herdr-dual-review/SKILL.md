@@ -8,9 +8,7 @@ disable-model-invocation: true
 
 你是主 agent：負責開審查者、等待、轉送質詢、查證條目、寫報告。找問題是審查者的工作，你只查證他們列出的條目。
 
-本 skill 對應 herdr-app 0.1.14、hc 0.1.19。版本更新後行為不符時，以 `hc --skill`、`herdr-app --skill` 為準。
-
-以下 `SKILL_DIR` 指這份 SKILL.md 所在目錄（通常是 `~/.agents/skills/herdr-dual-review`）。
+`hc` 的一般用法照 `hc --skill`，行為不符時以手冊為準。以下 `SKILL_DIR` 指這份 SKILL.md 所在目錄。
 
 主 agent 可以是 Claude Code 或 Codex，流程相同：Claude 與 Codex 兩個審查者都透過 Herdr 開，各自是全新的 context，不帶入你的對話。
 
@@ -40,12 +38,12 @@ python "SKILL_DIR/scripts/init_run.py" --base <目標分支>
 
 兩邊要同時跑：先送 Codex，再開 Claude。下面每個指令送出後都會馬上返回，不要加 `--wait`，也不要在中間等待。兩邊都送出後，才進入第 3 步。
 
-先用 `hc get "$HC_TERMINAL_ID"`（PowerShell 用 `$env:HC_TERMINAL_ID`）取得 `labels` 的 `herdr.space`、`herdr.tab`。下面的 `<位置>` 指 `--label herdr.space=<space> --label herdr.tab=<tab>`，讓兩個審查者歸在同一個 tab，在背景跑、沒有 pane。名稱已被占用時改用 `-2` 結尾的名稱，後續指令都用同一個名稱。
+審查者是你開的子終端機，會歸在你的 tab，在背景跑、沒有 pane。名稱已被占用時改用 `-2` 結尾的名稱，後續指令都用同一個名稱。
 
 **Codex**（原生 review，在 hc 終端機裡當一般指令執行，送出後就在背景跑）：
 
 ```bash
-hc run --bg --no-notify --name review-codex --cwd "<repo>" <位置> python "SKILL_DIR/scripts/codex_review.py" review --base "<base>" --run-dir "<run_dir>" [--model <m>] [--effort <e>]
+hc run --bg --no-notify --name review-codex --cwd "<repo>" python "SKILL_DIR/scripts/codex_review.py" review --base "<base>" --run-dir "<run_dir>" [--model <m>] [--effort <e>]
 ```
 
 跑完會產生 `codex-review.md`，以及記錄結束碼和 session id 的 `codex-review.md.done.json`。
@@ -57,13 +55,13 @@ hc run --bg --no-notify --name review-codex --cwd "<repo>" <位置> python "SKIL
 **Claude**：送出 Codex 指令後開 Claude（互動式 agent，保留審查脈絡給之後質詢用）。`/code-review` 要放在啟動參數：`hc send` 送出的內容會被包進 `<hc>` 標籤，slash 指令不會觸發。
 
 ```bash
-hc run --bg --no-notify --outlive-parent --name review-claude --cwd "<repo>" <位置> claude --add-dir "<run_dir>" [--model <m>] [--effort <e>] "/code-review high <base>...HEAD"
+hc run --bg --no-notify --outlive-parent --name review-claude --cwd "<repo>" claude --add-dir "<run_dir>" [--model <m>] [--effort <e>] "/code-review high <base>...HEAD"
 hc wait review-claude --timeout 30
 ```
 
-審查者預設留在背景，沒有 pane。使用者要求看審查過程時，才用 `python "SKILL_DIR/../herdr-run-skill/scripts/keep_beside.py" --target review-claude` 放進你所在的 tab；沒放成時審查者照常在背景跑，不影響後續步驟。不要直接用 `herdr-app do terminal.keep`：它會開在使用者目前焦點的 tab。
+審查者預設留在背景，沒有 pane。使用者要求看審查過程時，才用 `python "SKILL_DIR/../herdr-run-skill/scripts/keep_beside.py" --target review-claude` 放進你所在的 tab；沒放成時審查者照常在背景跑，不影響後續步驟。
 
-回傳的 `status` 是 `null` 時，Claude 可能停在資料夾信任或更新畫面，用 `hc read --lines 0 review-claude` 看一次，有畫面要處理就照下面的規則，還在啟動就再等。`status` 有值但 `turn` 還是 `0` 也再等一次。等到第一回合結束後，用 `hc read --lines 0 review-claude` 看一次畫面：
+回傳的 `status` 是 `null` 時，Claude 可能停在資料夾信任或更新畫面，用 `hc read --lines 0 review-claude` 看一次，有畫面要處理就照下面的規則，還在啟動就再等。等到第一回合結束後，用 `hc read --lines 0 review-claude` 看一次畫面：
 
 - 如果是更新提示，選「只跳過這次更新」之類的選項，不要更新，也不要長期略過更新。
 - 如果是其他選單或確認畫面，照第 3 步 `blocked` 的方式處理，交給使用者。
@@ -122,7 +120,7 @@ python "SKILL_DIR/scripts/wait_for.py" \
 2. 送出 Codex：
 
    ```bash
-   hc run --bg --no-notify --name ask-codex --cwd "<repo>" <位置> python "SKILL_DIR/scripts/codex_review.py" ask --prompt-file "<run_dir>/crossexam-to-codex.md" --out "<run_dir>/crossexam-codex-answer.md" --session <codex-review.md.done.json 的 session_id> [--model <m>] [--effort <e>]
+   hc run --bg --no-notify --name ask-codex --cwd "<repo>" python "SKILL_DIR/scripts/codex_review.py" ask --prompt-file "<run_dir>/crossexam-to-codex.md" --out "<run_dir>/crossexam-codex-answer.md" --session <codex-review.md.done.json 的 session_id> [--model <m>] [--effort <e>]
    ```
 
    `session_id` 如果是 null，就不帶 `--session`，腳本會改開一個新的唯讀 session。

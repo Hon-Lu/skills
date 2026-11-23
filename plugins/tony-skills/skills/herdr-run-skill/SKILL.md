@@ -5,110 +5,63 @@ description: 經 Herdr App 讓 Codex 或 Claude agent 執行指定的 skill 或 
 
 # Herdr App 交 agent 執行 skill 或 slash 指令
 
-把呼叫端指定的 skill 或 slash 指令送進 Codex 或 Claude 執行。要跑哪個 skill、帶什麼參數由呼叫端決定，本 skill 只負責正確送達。Herdr App 的一般用法看 `hc --skill`（終端機與 agent）和 `herdr-app --skill`（視窗）。舊版 `herdr` CLI 的指令在 Herdr App 不適用。
-
-本 skill 對應 herdr-app 0.1.14、hc 0.1.19；`keep_beside.py` 實測於 herdr-app 0.1.16、hc 0.1.21。版本更新後行為不符時，以 `hc --skill`、`herdr-app --skill` 為準。
-
-以下 `SKILL_DIR` 指這份 SKILL.md 所在目錄。
+把呼叫端指定的 skill 或 slash 指令送進 Codex 或 Claude 執行；跑什麼、帶什麼參數由呼叫端決定，本 skill 只負責正確送達。這裡只寫 `hc --skill` 沒有的部分，其餘照手冊，行為不符時以手冊為準。以下 `SKILL_DIR` 指這份 SKILL.md 所在目錄。
 
 ## 前置
 
 - `HC_TERMINAL_ID` 沒有值就告知使用者並停止。
-- 用 `hc ls` 找既有的 agent。有就沿用，照「沿用既有的 agent」送出；沒有才新開。
+- 用 `hc ls` 找既有的 agent，有就沿用，沒有才新開。
 
-## 新開 agent：第一個指令直接帶在啟動參數
+## 指令怎麼寫
 
-用 `hc run --bg` 在背景啟動，把 skill 當第一個 prompt 帶入，不必等就緒，也不會被補全選單吃掉。預設留在背景，沒有 pane；使用者要求顯示時，才放進呼叫端所在的 tab，不開新 tab。
+- 照指定的 skill 執行，不換成 agent 內建的同類功能（例如要求跑某個 code-review skill，不改跑 `codex review`）。
+- Claude 用 `/`，plugin 內的 skill 寫成 `/<plugin>:<skill>`。Codex 的 skill 用 `$<skill>`：呼叫端給的 `/xxx` 是 skill 而不是 Codex 的 slash 指令時，改成 `$xxx`。
+- 名稱不確定就傳完整名稱。Codex 的名稱可能與 Claude 不同（例如 plugin 前綴），依序查 `~/.codex/history.jsonl` 過去觸發的寫法（`grep -o '\$[^ "]*<skill>[^ "]*' ~/.codex/history.jsonl | sort | uniq -c`）、列出 `~/.codex/skills`，都查不到就問使用者。不要遞迴搜尋整個 `~/.codex`：底下的 sessions 很大，會卡住數分鐘。
+- 指令後面接 `<回報要求>`：
 
-Codex：
+  ```text
+  （呼叫端 agent 附加）完成、停下等使用者確認或卡住時，用 hc send <呼叫端的 HC_TERMINAL_ID> 回報結果或卡點；內容長就寫進檔案、回報路徑。
+  ```
+
+  觸發 skill 的訊息沒有 `<hc>` 標記，也就沒有 `reach`，不寫的話對方停下時不會回報。skill 把整段參數當固定格式的輸入時不接，確認觸發後另用一般的 `hc send` 補送。
+- 代使用者轉述時，在參數裡說明來源：這些訊息沒有 `<hc>` 標記，對方看不出來自 agent。
+
+## 新開 agent
+
+指令直接帶在啟動參數，不必等就緒，也不會被補全選單吃掉：
 
 ```bash
-hc run --bg --json --name <名稱> --outlive-parent --cwd "<目錄>" codex --no-daemon -c check_for_update_on_startup=false -c features.hooks=false '$<skill> <參數>'
+hc run --bg --json --name <名稱> --outlive-parent --cwd "<目錄>" claude '/<plugin>:<skill> <參數> <回報要求>'
+hc run --bg --json --name <名稱> --outlive-parent --cwd "<目錄>" codex --no-daemon -c check_for_update_on_startup=false -c features.hooks=false '$<skill> <參數> <回報要求>'
 ```
 
-Claude：
-
-```bash
-hc run --bg --json --name <名稱> --outlive-parent --cwd "<目錄>" claude '/<plugin>:<skill> <參數>'
-```
-
-使用者要求顯示時，再放進 pane：
-
-```bash
-python "SKILL_DIR/scripts/keep_beside.py" --target <名稱>
-```
-
-- `--no-daemon`：Codex 必加，否則它的指令會跑在 hc 之外。
-- `-c features.hooks=false`：這個 Codex 不執行任何 hook，也不會跳 hook 信任畫面。不要改用 `--dangerously-bypass-hook-trust`，那會執行未經信任的 hook。
+- Codex 的 `-c features.hooks=false` 讓它不執行 hook，也不跳 hook 信任畫面；不要改用 `--dangerously-bypass-hook-trust`，那會執行未經信任的 hook。
 - `--outlive-parent`：呼叫端結束後 agent 仍保留，方便接著問。
-- 不要直接用 `herdr-app do terminal.open` 或 `terminal.keep`：它們沒有指定 tab 的參數，會開到使用者目前焦點所在的 tab。`keep_beside.py` 先把焦點移到呼叫端、放好後再還給使用者。
-- 名稱已被占用時換一個，例如加 `-2`，後續指令都用同一個名稱。
-- 啟動參數不經過 `hc send`，對方收到的內容沒有 `<hc>` 來源標記。代使用者轉述時，要在參數裡說明來源。
+- 開完 `hc wait <名稱> --timeout 30`。`status` 是 `null` 時看一次畫面，停在資料夾信任或選單畫面就照「操作界線」處理。
+- 使用者要求顯示時，才用 `python "SKILL_DIR/scripts/keep_beside.py" --target <名稱>` 放進呼叫端所在的 tab。直接用 `herdr-app do terminal.keep` 或 `terminal.open` 會開到使用者正在看的 tab。
 
 ## 沿用既有的 agent
 
-從 agent 用 `hc send` 送出的內容，對方收到時會包成 `<hc from="t9">…</hc>`。這個來源標記對一般對話有用，但開頭不再是 `/`，slash 指令與 skill 不會觸發；自然語句請對方調用也不行，設了 `disable-model-invocation` 的 skill 會拒絕。
-
-所以**要觸發 skill 或 slash 指令時一律不帶標記，其他對話一律保留標記**，不依情況判定。`hc send` 沒有對應選項，做法是只在這一次呼叫清掉 `HC_TERMINAL_ID`：
+`hc send` 送出的內容會包成 `<hc from="…">`，開頭不再是 `/`，skill 和 slash 指令不會觸發，自然語句請對方調用也不行。所以觸發 skill 或 slash 指令（包括 `/compact` 這類內建指令）時，只在這次呼叫清掉 `HC_TERMINAL_ID`；其他對話一律保留標記。回報要求裡的位址要在清掉之前填好。
 
 ```bash
-env -u HC_TERMINAL_ID MSYS_NO_PATHCONV=1 hc send --wait <名稱> '/<plugin>:<skill> <參數>'    # Claude
-env -u HC_TERMINAL_ID hc send <名稱> '$<skill> <參數>'                                      # Codex：不加 --wait，見「送出之後」
+env -u HC_TERMINAL_ID MSYS_NO_PATHCONV=1 hc send <名稱> '/<plugin>:<skill> <參數> <回報要求>'
 ```
 
 ```powershell
-$sender = $env:HC_TERMINAL_ID; Remove-Item Env:HC_TERMINAL_ID; hc send --wait <名稱> '/<plugin>:<skill> <參數>'; $env:HC_TERMINAL_ID = $sender
+$sender = $env:HC_TERMINAL_ID; Remove-Item Env:HC_TERMINAL_ID; hc send <名稱> '/<plugin>:<skill> <參數> <回報要求>'; $env:HC_TERMINAL_ID = $sender
 ```
 
-- 內建 slash 指令（例如 `/compact`）用同樣的寫法。
-- 這是實測 hc 0.1.19 的行為，文件沒有保證。送出後用 `hc read --lines 0 <名稱>` 確認對方有觸發；出現 `<hc from=` 或對方把它當一般訊息，就停下來轉告使用者，改請使用者親自輸入。
-- 少了標記，對方看不出訊息來自 agent。代使用者轉述時，要在參數裡說明來源。
-- `hc get` 的 `status` 是 `null` 時，`hc send` 不會擋下：對方若停在信任或選單畫面，Enter 會直接回答它（實測把 Claude 的信任畫面答成「No, exit」）。送出前先用 `hc read --lines 0 <名稱>` 確認對方停在輸入框。
-
-## 從哪個 shell 送
-
-- Git Bash 會把開頭是 `/` 的參數當成路徑改寫，`/compact` 送到對方會變成 `C:/Program Files/Git/compact`。在每個 `hc` 指令前加 `MSYS_NO_PATHCONV=1`。
-- PowerShell 不會改寫 `/`；`$` 開頭的字串用單引號，雙引號會被展開成變數。
-
-## 指令轉換
-
-- **照指定的 skill 執行，不換成 agent 內建的同類功能**（例如要求跑某個 code-review skill，不改跑 `codex review`）。
-- Codex 的 skill 一律用 `$` 觸發：呼叫端給的 `/xxx` 若是 skill 而不是 Codex 的 slash 指令，改成 `$xxx`。
-- Claude 的 skill 與 slash 指令都用 `/` 觸發，plugin 內的 skill 寫成 `/<plugin>:<skill>`：呼叫端給的 `$xxx` 改成 `/xxx`。
-- 指令只給短名、或可能有多個同名 skill 時，傳完整名稱；對不上就停下來問使用者，不要猜。
-- 送給 Claude 時，呼叫端給的 `/<plugin>:<skill>` 就是原生寫法，直接送出，不用另外查名稱。
-- 送給 Codex 時，skill 在 Codex 的名稱可能與 Claude 不同（例如 plugin 前綴）。不確定時依序查，查到就停：
-  1. `~/.codex/history.jsonl` 裡過去觸發過的寫法，例如 `grep -o '\$[^ "]*<skill>[^ "]*' ~/.codex/history.jsonl | sort | uniq -c`。
-  2. 列出 `~/.codex/skills` 等設定目錄。
-  3. 都找不到就停下來問使用者。
-  不要對 `~/.codex` 整個目錄遞迴搜尋：底下的 sessions 對話紀錄很大，指令會卡住數分鐘。
+- 送出前用 `hc read --lines 0 <名稱>` 確認對方停在輸入框：`status` 是 `null` 時 `hc send` 不會擋，Enter 會直接回答信任或選單畫面（實測把 Claude 的信任畫面答成「No, exit」）。
+- 送出後再看一次。出現 `<hc from=` 或對方把它當一般訊息，就停下來請使用者親自輸入。
+- Git Bash 會把開頭是 `/` 的參數改寫成路徑（`/compact` 變成 `C:/Program Files/Git/compact`），每個 `hc` 前加 `MSYS_NO_PATHCONV=1`。PowerShell 不會改寫，但 `$` 開頭的字串要用單引號。
 
 ## 送出之後
 
-等待方式依對方而定，不要反覆讀畫面看進度。
-
-**新開的 agent 先確認有開起來**：`hc wait <名稱> --timeout 30`。回傳的 `status` 是 `null` 時，用 `hc read --lines 0 <名稱>` 看一次畫面。停在資料夾信任、選單或授權畫面，就照「操作界線」處理；正在啟動或工作，就往下等。
-
-**Claude**：用 `hc wait <名稱>`（既有的 agent 用 `hc send --wait`）。
-
-- `status` 有值但 `turn` 還是 `0`：第一個 prompt 還沒開始，再等一次。
-- `reason` 是 `timeout` 只是到了回報時間，再等一次。
-- `status` 是 `blocked`：用 `hc read --lines 0 <名稱>` 看畫面，照「操作界線」處理。
-
-**Codex**：hc 0.1.19 實測收不到 Codex 的狀態，`status` 一直是 `null`、`turn` 一直是 `0`，`hc wait` 和 `hc send --wait` 只會等到逾時。改等它的對話紀錄：
-
-```bash
-python "SKILL_DIR/../herdr-read-reply/scripts/read_reply.py" --target <名稱> --out <暫存檔> --wait-sec 540 [--after <N>]
-```
-
-- 新開的 agent 不帶 `--after`。
-- 既有的 agent 要在 `hc send` 之前，先不帶 `--wait-sec` 跑一次，記下 `completed`（`not_found` 時是 0）當作 `<N>`。
-- `status` 是 `ok`：回覆已寫進 `--out`。
-- `status` 是 `timeout`：用 `hc read --lines 0 <名稱>` 看畫面。還在工作就再跑一次，停在選單或授權畫面就照「操作界線」處理。
-
-- 讀回應，確認對方有照該 skill 的流程進行。看出誤解就立刻 `hc interrupt <名稱>` 中斷並回報使用者。
-- 完成後讀結果回報使用者，並附上終端機位址；agent 保留不關，方便接著問。回覆長、要原文時看 `herdr-read-reply`。
+- 呼叫端不需要結果就能繼續（例如對方會分段停下等使用者確認）：不等待，對方會照回報要求回報。
+- 要拿到結果才能往下：新開的用 `hc wait <名稱>`，既有的送出時加 `--wait`，用法照手冊。
+- 確認對方照該 skill 的流程進行，看出誤解就 `hc interrupt <名稱>` 並回報使用者。完成後回報結果並附上終端機位址，agent 保留不關。回覆長、要原文時看 `herdr-read-reply`。
 
 ## 操作界線
 
-Codex 或 Claude 停在選單、授權或提問畫面時，只把畫面內容轉告使用者，由使用者自己到該終端機回應，不代按，也不用 `hc send --force` 繞過。
+對方停在選單、授權或提問畫面時，只把畫面內容轉告使用者，由使用者自己到該終端機回應；不代按，也不用 `hc send --force` 繞過。
