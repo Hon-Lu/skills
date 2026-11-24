@@ -42,7 +42,7 @@ hc run --bg --json --name <名稱> --outlive-parent --cwd "<目錄>" codex --no-
 
 ## 沿用既有的 agent
 
-`hc send` 送出的內容會包成 `<hc from="…">`，開頭不再是 `/`，skill 和 slash 指令不會觸發，自然語句請對方調用也不行。所以觸發 skill 或 slash 指令（包括 `/compact` 這類內建指令）時，只在這次呼叫清掉 `HC_TERMINAL_ID`；其他對話一律保留標記。回報要求裡的位址要在清掉之前填好。
+`hc send` 送出的內容會包成 `<hc from="…">`，指令不在開頭，不保證會被當成指令觸發；改用自然語句請對方調用也不行，限定使用者調用的 skill 不會執行。所以不論 Claude 或 Codex，觸發 skill 或 slash 指令（包括 `/compact` 這類內建指令）時，只在這次呼叫清掉 `HC_TERMINAL_ID`；其他對話一律保留標記。回報要求裡的位址要在清掉之前填好。
 
 ```bash
 env -u HC_TERMINAL_ID MSYS_NO_PATHCONV=1 hc send <名稱> '/<plugin>:<skill> <參數> <回報要求>'
