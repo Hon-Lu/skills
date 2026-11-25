@@ -55,7 +55,7 @@ hc run --bg --no-notify --name review-codex --cwd "<repo>" python "SKILL_DIR/scr
 **Claude**：送出 Codex 指令後開 Claude（互動式 agent，保留審查脈絡給之後質詢用）。`/code-review` 要放在啟動參數：`hc send` 送出的內容會被包進 `<hc>` 標籤，slash 指令不會觸發。
 
 ```bash
-hc run --bg --no-notify --outlive-parent --name review-claude --cwd "<repo>" claude --add-dir "<run_dir>" [--model <m>] [--effort <e>] "/code-review high <base>...HEAD"
+hc run --bg --keep --no-notify --name review-claude --cwd "<repo>" claude --add-dir "<run_dir>" [--model <m>] [--effort <e>] "/code-review high <base>...HEAD"
 hc wait review-claude --timeout 30
 ```
 

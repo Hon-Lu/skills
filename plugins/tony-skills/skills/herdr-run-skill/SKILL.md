@@ -31,12 +31,11 @@ description: 經 Herdr App 讓 Codex 或 Claude agent 執行指定的 skill 或 
 指令直接帶在啟動參數，不必等就緒，也不會被補全選單吃掉：
 
 ```bash
-hc run --bg --json --name <名稱> --outlive-parent --cwd "<目錄>" claude '/<plugin>:<skill> <參數> <回報要求>'
-hc run --bg --json --name <名稱> --outlive-parent --cwd "<目錄>" codex --no-daemon -c check_for_update_on_startup=false -c features.hooks=false '$<skill> <參數> <回報要求>'
+hc run --bg --keep --json --name <名稱> --cwd "<目錄>" claude '/<plugin>:<skill> <參數> <回報要求>'
+hc run --bg --keep --json --name <名稱> --cwd "<目錄>" codex --no-daemon -c check_for_update_on_startup=false -c features.hooks=false '$<skill> <參數> <回報要求>'
 ```
 
 - Codex 的 `-c features.hooks=false` 讓它不執行 hook，也不跳 hook 信任畫面；不要改用 `--dangerously-bypass-hook-trust`，那會執行未經信任的 hook。
-- `--outlive-parent`：呼叫端結束後 agent 仍保留，方便接著問。
 - 開完 `hc wait <名稱> --timeout 30`。`status` 是 `null` 時看一次畫面，停在資料夾信任或選單畫面就照「操作界線」處理。
 - 使用者要求顯示時，才用 `python "SKILL_DIR/scripts/keep_beside.py" --target <名稱>` 放進呼叫端所在的 tab。直接用 `herdr-app do terminal.keep` 或 `terminal.open` 會開到使用者正在看的 tab。
 
