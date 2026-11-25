@@ -20,7 +20,7 @@ description: 經 Herdr App 讓 Codex 或 Claude agent 執行指定的 skill 或 
 - 指令後面接 `<回報要求>`：
 
   ```text
-  （呼叫端 agent 附加）完成、停下等使用者確認或卡住時，用 hc send <呼叫端的 HC_TERMINAL_ID> 回報結果或卡點；內容長就寫進檔案、回報路徑。
+  （呼叫端 agent 附加）完成、停下等使用者確認或卡住時，用 hc send <呼叫端的 HC_TERMINAL_ID> 回報結果或卡點。長結果寫檔並回報路徑。回報後即可繼續或結束回合。
   ```
 
   觸發 skill 的訊息沒有 `<hc>` 標記，也就沒有 `reach`，不寫的話對方停下時不會回報。skill 把整段參數當固定格式的輸入時不接，確認觸發後另用一般的 `hc send` 補送。
@@ -58,8 +58,8 @@ $sender = $env:HC_TERMINAL_ID; Remove-Item Env:HC_TERMINAL_ID; hc send <名稱> 
 
 ## 送出之後
 
-- 呼叫端不需要結果就能繼續（例如對方會分段停下等使用者確認）：不等待，對方會照回報要求回報。
-- 要拿到結果才能往下：新開的用 `hc wait <名稱>`，既有的送出時加 `--wait`，用法照手冊。
+- 呼叫端能繼續時照常工作。對方完成、受阻或停下等使用者確認時，依回報要求非同步傳回結果。
+- 要拿到結果才能往下時，用 `hc wait <名稱>`。已確定要等既有 agent 處理完這則指令時，也可在第一次 `hc send` 加 `--wait`，用法照手冊。
 - 確認對方照該 skill 的流程進行，看出誤解就 `hc interrupt <名稱>` 並回報使用者。完成後回報結果並附上終端機位址，agent 保留不關。回覆長、要原文時看 `herdr-read-reply`。
 
 ## 操作界線
