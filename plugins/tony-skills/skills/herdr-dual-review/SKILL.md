@@ -10,7 +10,7 @@ disable-model-invocation: true
 
 `hc` 的一般用法照 `hc --skill`，行為不符時以手冊為準。以下 `SKILL_DIR` 指這份 SKILL.md 所在目錄。
 
-主 agent 可以是 Claude Code 或 Codex，流程相同：Claude 與 Codex 兩個審查者都透過 Herdr 開，各自是全新的 context，不帶入你的對話。
+Claude Code 主控時直接調用原生 `code-review`，審查由它的 sub-agent 執行。Codex 主控時另開 Claude 審查終端。
 
 ## 0. 前置檢查與解析輸入
 
@@ -20,7 +20,7 @@ disable-model-invocation: true
   - **審查對象**（必填）：自己的分支，或別人的 MR。沒給就和目標分支一起問，開審查者之前確定。
   - **需求來源**（選填）：ticket、規格的路徑，或 issue 編號與連結。
   - **Claude 模型／effort**、**Codex 模型／effort**（選填）。使用者沒提到的就不帶參數，沿用各 CLI 的預設。
-- Claude 審查一律用 `/code-review high`，`high` 是 review 深度，和 session 的 effort 無關。
+- Claude 審查一律用 `/code-review high`，`high` 是 review 深度，和 session 的 effort 無關。Claude 主控時，原生審查沿用主控的模型與 effort。若使用者另指定 Claude 設定，先告知這項限制。
 
 ## 1. 建立執行目錄
 
@@ -36,15 +36,16 @@ python "SKILL_DIR/scripts/init_run.py" --base <目標分支>
 
 兩個審查者都只讀：不修改檔案、不 commit、不跑整合測試。整合測試會寫真實資料庫，兩邊同時跑會互相干擾。
 
-兩邊要同時跑：先送 Codex，再開 Claude。下面每個指令送出後都會馬上返回，不要加 `--wait`，也不要在中間等待。兩邊都送出後，才進入第 3 步。
+先啟動 Codex 並掛到呼叫端所在的 tab，再啟動 Claude 審查。兩邊都啟動後才等結果。終端名稱已被占用時改用 `-2` 結尾，後續指令使用實際名稱。
 
-審查者是你開的子終端機，會歸在你的 tab，在背景跑、沒有 pane。名稱已被占用時改用 `-2` 結尾的名稱，後續指令都用同一個名稱。
-
-**Codex**（原生 review，在 hc 終端機裡當一般指令執行，送出後就在背景跑）：
+### Codex 原生審查
 
 ```bash
 hc run --bg --no-notify --name review-codex --cwd "<repo>" python "SKILL_DIR/scripts/codex_review.py" review --base "<base>" --run-dir "<run_dir>" [--model <m>] [--effort <e>]
+python "SKILL_DIR/../herdr-run-skill/scripts/keep_beside.py" --target review-codex
 ```
+
+`hc run` 成功後立刻執行第二行，讓 Codex review 在呼叫端的 tab 顯示為 pane。確認腳本回報的 tab 正確，放置失敗時回報原因並停下。
 
 跑完會產生 `codex-review.md`，以及記錄結束碼和 session id 的 `codex-review.md.done.json`。
 
@@ -52,14 +53,20 @@ hc run --bg --no-notify --name review-codex --cwd "<repo>" python "SKILL_DIR/scr
 
 > 把最終 findings 原文寫到 <run_dir>/claude-review.md：每條含等級、file:line、問題、觸發情境、來源、同類位置。等級用 P0–P3，定義與 Codex review 相同：P0 必須立刻處理，會阻擋發布或主要使用；P1 緊急，應在下一輪處理；P2 一般，終究要修；P3 低，可有可無的改善。review 原本的等級或排序依這套定義換算，每條依自己的影響獨立判斷，不按名次分配，全部落在同一級也可以。review 有給 verdict（例如 CONFIRMED／PLAUSIBLE）時照抄。來源：有問題的程式碼在 <base> 就已存在寫「既有問題」，由本次變更造成寫「本分支引入」。同類位置：搜尋 repo 中沿用相同寫法、會有同樣問題的其他位置，列出 file:line，沒有就寫「無」。沒有問題就寫「無 findings」。最後一行寫 <!-- REVIEW-END -->。這是暫存檔，用一般 UTF-8 寫入即可，不必處理 BOM 或換行格式。除了這個檔案不要修改任何東西。
 
-**Claude**：送出 Codex 指令後開 Claude（互動式 agent，保留審查脈絡給之後質詢用）。`/code-review` 要放在啟動參數：`hc send` 送出的內容會被包進 `<hc>` 標籤，slash 指令不會觸發。
+### Claude 主控
+
+用 Skill 工具調用 `code-review`，args 填 `high <base>...HEAD`。原生 skill 會啟動背景審查 sub-agent，接著依第 3 步等待通知。
+
+### Codex 主控
+
+用 Herdr 開互動式 Claude 審查者，保留對話供後續質詢。把 `/code-review` 放在啟動參數裡。
 
 ```bash
 hc run --bg --keep --no-notify --name review-claude --cwd "<repo>" claude --add-dir "<run_dir>" [--model <m>] [--effort <e>] "/code-review high <base>...HEAD"
 hc wait review-claude --timeout 30
 ```
 
-審查者預設留在背景，沒有 pane。使用者要求看審查過程時，才用 `python "SKILL_DIR/../herdr-run-skill/scripts/keep_beside.py" --target review-claude` 放進你所在的 tab；沒放成時審查者照常在背景跑，不影響後續步驟。
+Claude 審查終端預設留在背景。使用者要求顯示時，才用 `python "SKILL_DIR/../herdr-run-skill/scripts/keep_beside.py" --target review-claude` 放進你所在的 tab；沒放成時審查者照常在背景跑，不影響後續步驟。
 
 回傳的 `status` 是 `null` 時，Claude 可能停在資料夾信任或更新畫面，用 `hc read --lines 0 review-claude` 看一次，有畫面要處理就照下面的規則，還在啟動就再等。等到第一回合結束後，用 `hc read --lines 0 review-claude` 看一次畫面：
 
@@ -74,9 +81,11 @@ hc send review-claude "code review 全部完成後（包含背景審查），<�
 
 Claude 的 session id 用 `hc get review-claude` 的 `foreground.pid`，到 `~/.claude/sessions/<pid>.json` 讀 `sessionId`，記下來，報告會用到。
 
-審查有沒有完成一律看檔案，不看 agent 狀態：`/code-review` 會把審查丟到背景，agent 顯示 idle 時審查可能還在跑。
+審查完成以檔案為準。`/code-review` 在背景執行，Claude 終端顯示 idle 時審查可能仍在跑。
 
 ## 3. 等待：用腳本阻塞，不要看 pane
+
+Claude 主控先等原生審查的完成通知，記下 task ID，再用 SendMessage 把 `<輸出規則>` 交給同一個 task，請它寫完只回一行「完成」。報告以寫入的檔案為準。
 
 `wait_for.py` 等待期間不輸出任何東西，結束時只印一行 JSON。
 
@@ -90,6 +99,8 @@ python "SKILL_DIR/scripts/wait_for.py" \
   --exists "<run_dir>/codex-review.md.done.json" \
   --agent review-claude --timeout-sec <秒數>
 ```
+
+Claude 主控省略 `--agent review-claude`。
 
 依結果處理：
 
@@ -124,8 +135,8 @@ python "SKILL_DIR/scripts/wait_for.py" \
    ```
 
    `session_id` 如果是 null，就不帶 `--session`，腳本會改開一個新的唯讀 session。
-3. 送出 Claude：`hc send review-claude "請讀 <run_dir>/crossexam-to-claude.md，照裡面的規則回覆。"`
-4. 用第 3 步的方式等待：`--marker-file crossexam-claude-answer.md`、`--exists crossexam-codex-answer.md.done.json`。
+3. 把 `crossexam-to-claude.md` 的路徑交給原 Claude 審查者。Claude 主控用 SendMessage 傳給原生 task ID，請它寫完只回「完成」。Codex 主控用 `hc send review-claude`。
+4. 用第 3 步的方式等待 `crossexam-claude-answer.md` 的完成標記和 `crossexam-codex-answer.md.done.json`。
 
 質詢到此結束。不把回覆再轉給原本的提出方，也不開第二輪。
 
@@ -157,7 +168,7 @@ python "SKILL_DIR/scripts/wait_for.py" \
 
 用 `SKILL_DIR/assets/review-template.md` 產生 `<run_dir>/REVIEW.md`。它和 `run_dir` 裡的其他檔案都是暫存產物，用一般 UTF-8 寫入即可，不必另外轉 BOM 或換行格式。
 
-- 標頭填入 `init_run.py` 的欄位與兩邊的 session id。沒有指定的模型或 effort 寫「預設」。
+- 標頭填入 `init_run.py` 的欄位與兩邊的 session ID。Claude 主控時，Claude 欄填原生審查的 task ID，模型填主控的模型。沒有指定的模型或 effort 寫「預設」。
 - 標頭下方先放一行建議摘要與一張總表，每條一列，編號和下方條目相同。建議欄的文字依審查對象的規則填寫。
 - 不分章節，每條用 `1. [P1] 標題` 開頭的編號清單呈現，細節縮排在底下，最前面是建議與查證。依等級排序（P0 → P3）；同一級內依序排兩方都有、質詢成立、質詢不成立或不確定、未質詢的條目。沒有任何條目時寫「無 findings」，省略摘要與總表。
 - 審查者原本的欄位照舊呈現，你的判斷只寫在建議與查證兩行。
@@ -167,12 +178,12 @@ python "SKILL_DIR/scripts/wait_for.py" \
 - **質詢**：只有送過質詢的條目才寫這一行。回覆不成立或不確定時，在前面加 ⚠，並附上對方的理由。
 - 樣板裡的示範條目要換成實際內容。
 
-最後用 `hc rm review-codex`、`hc rm ask-codex` 移除 Codex 已結束的終端機，沒跑質詢時只移除前者。Claude 審查者保留，使用者逐條討論時可以用 `hc send <名稱>` 接著問。然後回覆使用者：
+最後用 `hc rm review-codex`、`hc rm ask-codex` 移除已結束的 Codex 終端機，沒跑質詢時只移除前者。逐條討論時，Claude 主控用 SendMessage 接著問原生 task，Codex 主控用 `hc send` 接著問 Claude 終端。然後回覆使用者：
 
 - `REVIEW.md` 的完整路徑；別人的 MR 再加上 `MR-COMMENT.md` 的完整路徑
 - 建議摘要與總表，讓使用者可以直接回「修 1、3」，或問要討論哪一條
 - 標了 ⚠ 的條目，這些質詢有分歧
 - 查證時發現的新問題（有才寫）
-- Claude 審查者仍開著（名稱與終端機位址），討論完可以用 `hc kill <名稱>`、`hc rm <名稱>` 關掉
+- Codex 主控時回報仍開著的 Claude 審查終端名稱與位址，討論完可用 `hc kill <名稱>`、`hc rm <名稱>` 關掉
 
 到這裡就停，要修哪些由使用者決定，程式碼等使用者指示才改。使用者做出決定後，把決定與理由寫進該條的 **決策** 一行；建議不修但使用者要修時，照使用者的決定。

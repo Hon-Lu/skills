@@ -1,6 +1,6 @@
 # tony-skills
 
-套件版本：`v0.19.2`
+套件版本：`v0.20.0`
 對應 Herdr App：`herdr-app 0.1.16`、`hc 0.1.22`
 安裝教程：[INSTALL.md](./INSTALL.md)
 <!-- 版本對齊 plugins/tony-skills/.claude-plugin/plugin.json 與 .codex-plugin/plugin.json，發版時三處一併更新 -->
@@ -30,7 +30,7 @@ Claude Code 在 Herdr App 的終端機啟動時（`HC_TERMINAL_ID` 有值），p
 
 明確呼叫並指定目標分支與審查對象，例如 `目標分支：dev，審查對象：別人的 MR`；可另外指定需求來源（ticket、規格或 issue）與兩邊的模型與 effort。主 agent 可以是 Claude 或 Codex。
 
-1. Claude（`/code-review high`）與 Codex（`codex review`）同時審查，只讀不寫。不論主 agent 是 Claude 或 Codex，兩邊都透過 `hc` 在背景開，各自是全新的 context，Claude 審查者也能指定模型與 effort。
+1. Claude（`/code-review high`）與 Codex（`codex review`）同時審查，只讀不寫。Codex 審查顯示在呼叫端 tab 的 pane。Claude 主控直接調用原生審查，由它的 sub-agent 執行。Codex 主控才另開 Claude 審查終端，可指定其模型與 effort。
 2. 只有一方抓到的 P0–P2，交給另一方質詢一輪。
 3. 主 agent 對照程式碼與需求來源查證每一條（含 P3），回答白話問題、是否這次造成、會不會發生、後果與修法。原條目與等級不動。
 4. 依審查對象給出建議，判斷依據不看等級：自己的分支是修／不修／你判斷；別人的 MR 是阻擋／建議／待查證／不提，並另外產出可貼上 MR 的 `MR-COMMENT.md`。
