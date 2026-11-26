@@ -1,6 +1,6 @@
 # tony-skills
 
-套件版本：`v0.20.0`
+套件版本：`v0.20.1`
 對應 Herdr App：`herdr-app 0.1.16`、`hc 0.1.22`
 安裝教程：[INSTALL.md](./INSTALL.md)
 <!-- 版本對齊 plugins/tony-skills/.claude-plugin/plugin.json 與 .codex-plugin/plugin.json，發版時三處一併更新 -->
@@ -24,7 +24,7 @@ Tony 的 Skills。
 
 ## Herdr 協作規則（Claude Code）
 
-Claude Code 在 Herdr App 的終端機啟動時（`HC_TERMINAL_ID` 有值），plugin 的 SessionStart hook 會把 `plugins/tony-skills/hooks-handlers/herdr-rules.md` 帶入 context：轉述給其他 agent 時表明身分、不代替使用者確認、一次性代工改用 sub-agent，開 Herdr agent 時用 `hc run --bg --keep` 留在背景，使用者要求顯示時才放進自己所在的 tab（`keep_beside.py`），不開新 tab；照 hc 的標準流程，派工時要求對方完成、停下或卡住時用 `hc send` 回報，收到要求就照做，需要結果才 `hc wait`。新開 session、resume、`/clear` 與 context 壓縮後都會重新帶入；不在 Herdr App 內不輸出。修改規則檔後，已開著的 session 要等下一次觸發才會讀到新版。Codex 不支援，需要 `python` 在 PATH 上。
+Claude Code 在 Herdr App 的終端機啟動時（`HC_TERMINAL_ID` 有值），plugin 的 SessionStart hook 會把 `plugins/tony-skills/hooks-handlers/herdr-rules.md` 帶入 context：不代替使用者確認、一次性代工改用 sub-agent，開 Herdr agent 時用 `hc run --bg --keep` 留在背景，使用者要求顯示時才放進自己所在的 tab（`keep_beside.py`），不開新 tab；照 hc 的標準流程，派工時要求對方完成、停下或卡住時用 `hc send` 回報，收到要求就照做，需要結果才 `hc wait`。新開 session、resume、`/clear` 與 context 壓縮後都會重新帶入；不在 Herdr App 內不輸出。修改規則檔後，已開著的 session 要等下一次觸發才會讀到新版。Codex 不支援，需要 `python` 在 PATH 上。
 
 ### herdr-dual-review
 
