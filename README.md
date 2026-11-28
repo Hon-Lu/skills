@@ -1,6 +1,6 @@
 # tony-skills
 
-套件版本：`v0.18.0`
+套件版本：`v0.19.0`
 對應 Herdr App：`herdr-app 0.1.14`、`hc 0.1.19`
 安裝教程：[INSTALL.md](./INSTALL.md)
 <!-- 版本對齊 plugins/tony-skills/.claude-plugin/plugin.json 與 .codex-plugin/plugin.json，發版時三處一併更新 -->
@@ -21,6 +21,7 @@ Tony 的 Skills。
 | `herdr-dual-review` | 用 Herdr App 並行執行 Claude 與 Codex 原生 code review，交叉質詢單方發現，查證每條後彙整為附處理建議的 `REVIEW.md` |
 | `herdr-run-skill` | 經 Herdr App 把指定的 skill 或 slash 指令送進 Codex 或 Claude 執行，新開時帶在啟動參數，既有的 agent 不帶 `<hc>` 標記送出，並避開 Git Bash 改寫指令；Codex 不回報狀態，改等對話紀錄完成 |
 | `herdr-read-reply` | 經 Herdr App 讀取另一個終端機的內容：依要看的東西選讀畫面或讀 agent 的對話紀錄原文，可等待 Codex 回合完成，並附用 `hc` 取得指令輸出與結束代碼的寫法 |
+| `herdr-code-mode` | 用 `hc` 開 Claude 子 agent 前判斷要不要以 Code Mode（實驗功能）啟動：調查、改程式開；實機操作、瀏覽器、長駐協調者不開；拿不準就不開 |
 
 ## Herdr 協作規則（Claude Code）
 
@@ -56,6 +57,17 @@ agent 要看另一個終端機的內容時自動觸發，例如「看一下右�
 1. 依要看的東西選來源：狀態列、選單、短回覆讀畫面；長報告、要逐字引用或前幾回合的問答，用 `read_reply.py` 讀 Claude 或 Codex 的對話紀錄原文。
 2. `read_reply.py` 把回覆寫成 UTF-8 檔，只回一行 JSON 狀態；讀不到紀錄時改讀畫面。
 3. 指令用 `hc exec`，或 `hc run` 加 `hc wait` 取得輸出與結束代碼。
+
+### herdr-code-mode
+
+agent 要用 `hc run ... claude` 開子 agent 時自動觸發，由 agent 依任務自行決定。
+
+1. 開：大量讀碼、搜尋的調查任務，或單純改程式＋跑測試。不開：要送按鍵、截圖的實機測試，要用 Claude in Chrome、computer use、Remote Control 的任務，以及長駐的協調者 session。拿不準就不開。
+2. 用 `claude --settings '{"env":{"CLAUDE_CODE_EXPERIMENTAL_CODE_MODE":"1"}}'` 只對該 agent 開；`hc run env X=1 ...` 在 Windows 找不到 `env`。內建 Agent 工具的 sub-agent 只有父 session 本身是 Code Mode 時才能用。
+3. 首次啟用要使用者本人在終端機確認一次；背景 agent 卡在確認畫面時不代選，改用一般模式重派並告知使用者。
+4. 之後要 resume 那個 agent，啟動指令要帶同一個 `--settings`。
+
+需要 Claude Code v2.1.323 以上。
 
 ## 前置需求
 

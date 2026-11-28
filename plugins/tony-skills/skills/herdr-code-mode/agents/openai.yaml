@@ -1,0 +1,5 @@
+interface:
+  display_name: "Herdr Code Mode"
+  short_description: "Decide whether a Claude sub-agent started through hc runs in Code Mode, and how to start it"
+policy:
+  allow_implicit_invocation: true
