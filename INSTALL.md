@@ -73,3 +73,13 @@ codex plugin list
 ### 前置需求
 
 `herdr-dual-review` 需要 Herdr App（含 `hc`）、Claude Code CLI、Codex CLI 與 Python 3，主 agent 必須在 Herdr App 的終端機裡執行。
+
+### Codex 使用 Herdr 流程的設定
+
+Codex 預設在 sandbox 裡執行指令，連不到 Herdr 的具名管道，`hc send` 會失敗（`cannot access its pipe: 存取被拒。 (os error 5)`），子 agent 無法主動回報。在 `~/.codex/rules/default.rules` 加入下列規則，只放行與 Herdr 溝通用的子指令，其餘指令仍在 sandbox 內執行：
+
+```
+prefix_rule(pattern=["hc", ["send", "wait", "read", "ls", "get", "interrupt"]], decision="allow")
+```
+
+`hc run`、`hc exec` 能在 sandbox 外啟動任意程式，不要放行。

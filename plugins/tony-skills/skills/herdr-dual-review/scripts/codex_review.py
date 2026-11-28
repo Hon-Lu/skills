@@ -59,7 +59,7 @@ def review(a, codex):
     log = os.path.join(a.run_dir, "codex-review.log")
     before = rollout_files()
     started = time.time()
-    cmd = [codex, "review", "--base", a.base] + overrides(a.model, a.effort)
+    cmd = [codex, "--no-daemon", "review", "--base", a.base] + overrides(a.model, a.effort)
     print(f"[dual-review] Codex 審查中（base: {a.base}），完成前會持續顯示進度…", flush=True)
     with open(out, "w", encoding="utf-8") as fo, open(log, "w", encoding="utf-8") as fe:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
@@ -82,9 +82,9 @@ def ask(a, codex):
     with open(a.prompt_file, encoding="utf-8") as f:
         prompt = f.read()
     if a.session:
-        cmd = [codex, "exec", "resume", a.session, "-o", a.out] + overrides(a.model, a.effort) + ["-"]
+        cmd = [codex, "--no-daemon", "exec", "resume", a.session, "-o", a.out] + overrides(a.model, a.effort) + ["-"]
     else:
-        cmd = [codex, "exec", "-o", a.out] + overrides(a.model, a.effort) + ["-"]
+        cmd = [codex, "--no-daemon", "exec", "-o", a.out] + overrides(a.model, a.effort) + ["-"]
     print("[dual-review] Codex 質詢查證中…", flush=True)
     code = subprocess.run(cmd, input=prompt, text=True, encoding="utf-8", errors="replace").returncode
     write_done(a.out, exit_code=code, session_id=a.session, output=a.out, resumed=bool(a.session))
