@@ -19,8 +19,8 @@ description: 用 hc（herdr-core）開 Claude 子 agent 前使用：決定要不
 只能用 hc 開獨立的 `claude` 行程；內建 Agent 工具的 sub-agent 只有在父 session 本身是 Code Mode 時才能用（工具清單加 `REPL`）。
 
 ```bash
-hc run --bg --json --name <名稱> --outlive-parent --cwd "<信任過的資料夾>" \
-  claude --settings '{"env":{"CLAUDE_CODE_EXPERIMENTAL_CODE_MODE":"1"}}' --model opus '<派工內容>'
+hc run --bg --keep --json --name <名稱> --cwd "<信任過的資料夾>" \
+  claude --settings '{"env":{"CLAUDE_CODE_EXPERIMENTAL_CODE_MODE":"1"}}' [--model <m>] '<派工內容>'
 ```
 
 - 用 `--settings` 帶環境變數；`hc run env X=1 ...` 在 Windows 找不到 env。
