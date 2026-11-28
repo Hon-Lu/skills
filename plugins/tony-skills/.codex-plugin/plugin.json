@@ -1,6 +1,6 @@
 {
   "name": "tony-skills",
-  "version": "0.21.0",
+  "version": "0.21.1",
   "description": "Tony 的 Skills",
   "author": {
     "name": "Tony.Lu"
@@ -15,7 +15,7 @@
   "interface": {
     "displayName": "Tony Skills",
     "shortDescription": "Tony 的 Skills",
-    "longDescription": "Tony 的 Skills：herdr-dual-review、herdr-run-skill、herdr-read-reply、herdr-code-mode。",
+    "longDescription": "Tony 的 Skills：herdr-dual-review、herdr-run-skill、herdr-read-reply、code-mode-agents。",
     "developerName": "Tony.Lu",
     "category": "Developer Tools",
     "capabilities": [

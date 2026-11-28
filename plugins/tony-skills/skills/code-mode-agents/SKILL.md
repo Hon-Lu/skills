@@ -1,5 +1,5 @@
 ---
-name: herdr-code-mode
+name: code-mode-agents
 description: 用 hc（herdr-core）開 Claude 子 agent 前使用：決定要不要讓它以 Code Mode（實驗功能，Claude 寫 JavaScript 一次呼叫多個工具）啟動，以及怎麼開。只要是 `hc run ... claude` 派工就先看這份。需在 Herdr App 的終端機內（HC_TERMINAL_ID 有值）。
 ---
 
